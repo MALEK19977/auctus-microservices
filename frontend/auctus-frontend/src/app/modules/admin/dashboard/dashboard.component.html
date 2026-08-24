@@ -1,0 +1,292 @@
+<div class="admin-shell">
+
+  <header class="admin-header">
+    <div class="header-left">
+      <div class="brand-mark">A</div>
+      <div class="page-title">
+        <h1>Administrator Console</h1>
+        <p>Cheque validations, agent activity and the client register</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="live-badge" *ngIf="lastUpdated">
+        <i class="live-dot"></i>Live · {{ lastUpdated | date:'HH:mm:ss' }}
+      </span>
+      <button class="ghost-btn" (click)="goToClients()">Client register</button>
+      <button class="ghost-btn" (click)="goToMessages()">
+        Messages<span class="nav-badge" *ngIf="unreadMessages > 0">{{ unreadMessages }}</span>
+      </button>
+      <button class="ghost-btn" (click)="goToSchedule()">Agenda</button>
+      <div class="agent-info">
+        <div class="agent-avatar">{{ (userName || 'AD').slice(0,2).toUpperCase() }}</div>
+        <div class="agent-details">
+          <span class="agent-name">{{ userName || 'Administrator' }}</span>
+          <span class="agent-role">Admin</span>
+        </div>
+      </div>
+      <button class="ghost-btn danger" (click)="logout()">Sign out</button>
+    </div>
+  </header>
+
+  <!-- Filters: one row, above the charts -->
+  <section class="filter-bar">
+    <div class="filter">
+      <label for="range">Time range</label>
+      <select id="range" [(ngModel)]="selectedRange" (change)="onFilterChange()">
+        <option *ngFor="let r of ranges" [value]="r.id">{{ r.label }}</option>
+      </select>
+    </div>
+    <div class="filter">
+      <label for="agent">Agent</label>
+      <select id="agent" [(ngModel)]="selectedAgent" (change)="onFilterChange()">
+        <option value="ALL">All agents</option>
+        <option *ngFor="let a of agentOptions" [value]="a.agentId">{{ a.name }}</option>
+      </select>
+    </div>
+    <span class="filter-note">
+      Showing {{ range.label.toLowerCase() }}<span *ngIf="selectedAgent !== 'ALL'"> for the selected agent</span>.
+    </span>
+  </section>
+
+  <div *ngIf="loadError" class="alert alert-error">{{ loadError }}</div>
+  <div *ngIf="loading" class="alert alert-info">Loading indicators…</div>
+
+  <!-- KPI tiles -->
+  <section class="kpi-row">
+    <article class="kpi-card kpi-primary">
+      <span class="kpi-label">Cheques processed</span>
+      <span class="kpi-value">{{ stats.total }}</span>
+      <span class="kpi-foot">{{ stats.today }} today</span>
+    </article>
+
+    <article class="kpi-card">
+      <span class="kpi-label">Acceptance rate</span>
+      <span class="kpi-value accent-good">{{ acceptanceRate }}%</span>
+      <span class="kpi-foot">{{ stats.accepted }} validated · {{ stats.rejected }} rejected</span>
+    </article>
+
+    <article class="kpi-card">
+      <span class="kpi-label">Awaiting review</span>
+      <span class="kpi-value accent-warn">{{ stats.review }}</span>
+      <span class="kpi-foot">need a human check</span>
+    </article>
+
+    <article class="kpi-card">
+      <span class="kpi-label">Ceiling covered</span>
+      <span class="kpi-value">{{ money(stats.totalPlafondAccepted) }} <small>DT</small></span>
+      <span class="kpi-foot">across validated cheques</span>
+    </article>
+
+    <article class="kpi-card">
+      <span class="kpi-label">Average time</span>
+      <span class="kpi-value">{{ stats.averageProcessingTime | number:'1.1-1' }}<small>s</small></span>
+      <span class="kpi-foot">per validation</span>
+    </article>
+  </section>
+
+  <!-- Trend -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Decisions over time</h2>
+        <p>Each column is one {{ stats.bucketUnit === 'hour' ? 'hour' : 'day' }}; its height is the number of cheques processed</p>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><i class="swatch" [style.background]="COLOR.accepted"></i>Validated</span>
+        <span class="legend-item"><i class="swatch" [style.background]="COLOR.review"></i>Needs review</span>
+        <span class="legend-item"><i class="swatch" [style.background]="COLOR.rejected"></i>Rejected</span>
+        <button class="link-btn" (click)="showTrendTable = !showTrendTable">
+          {{ showTrendTable ? 'Show chart' : 'Show table' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="chart-wrap" *ngIf="!showTrendTable">
+      <svg [attr.viewBox]="'0 0 ' + chartW + ' ' + chartH" class="chart" preserveAspectRatio="xMidYMid meet">
+        <!-- y axis -->
+        <text [attr.x]="-(chartH/2)" [attr.y]="14" transform="rotate(-90)"
+              text-anchor="middle" class="axis-title">Cheques processed</text>
+        <g class="grid">
+          <line *ngFor="let t of yTicks" [attr.x1]="padL" [attr.x2]="chartW - 8"
+                [attr.y1]="t.y" [attr.y2]="t.y"></line>
+          <text *ngFor="let t of yTicks" [attr.x]="padL - 10" [attr.y]="t.y + 4"
+                text-anchor="end" class="axis-text">{{ t.value }}</text>
+        </g>
+
+        <!-- columns -->
+        <g *ngFor="let col of columns; let i = index"
+           (mouseenter)="hovered = col" (mouseleave)="hovered = null">
+          <rect [attr.x]="col.x - 4" [attr.y]="padT" [attr.width]="barWidth + 8"
+                [attr.height]="chartH - padB - padT" fill="transparent"></rect>
+          <rect *ngFor="let seg of col.segments"
+                [attr.x]="col.x" [attr.y]="seg.y"
+                [attr.width]="barWidth" [attr.height]="seg.height"
+                [attr.fill]="seg.fill" rx="3"></rect>
+          <text *ngIf="col.total > 0" [attr.x]="col.x + barWidth / 2"
+                [attr.y]="(col.segments.length ? col.segments[col.segments.length-1].y : padT) - 5"
+                text-anchor="middle" class="value-label">{{ col.total }}</text>
+          <text *ngIf="showLabel(i)" [attr.x]="col.x + barWidth / 2" [attr.y]="chartH - padB + 18"
+                text-anchor="middle" class="axis-text">{{ col.label }}</text>
+        </g>
+
+        <!-- x axis -->
+        <text [attr.x]="padL + (chartW - padL) / 2" [attr.y]="chartH - 6"
+              text-anchor="middle" class="axis-title">{{ axisLabel }}</text>
+      </svg>
+
+      <div class="tooltip" *ngIf="hovered">
+        <strong>{{ hovered.label }}</strong>
+        <span>{{ hovered.total }} cheque(s)</span>
+        <span *ngFor="let seg of hovered.segments">
+          <i class="swatch" [style.background]="seg.fill"></i>{{ seg.status }}: {{ seg.count }}
+        </span>
+      </div>
+    </div>
+
+    <table class="data-table" *ngIf="showTrendTable">
+      <thead><tr><th>Period</th><th>Validated</th><th>Needs review</th><th>Rejected</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let d of series">
+          <td>{{ d.label }}</td><td>{{ d.accepted }}</td><td>{{ d.review }}</td>
+          <td>{{ d.rejected }}</td><td>{{ d.total }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="two-col">
+    <!-- Agent activity -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Activity by agent</h2>
+          <p>Cheques processed in the selected range</p>
+        </div>
+        <button class="link-btn" (click)="showAgentTable = !showAgentTable">
+          {{ showAgentTable ? 'Chart' : 'Table' }}
+        </button>
+      </div>
+
+      <div *ngIf="!showAgentTable">
+        <div class="hbar" *ngFor="let bar of agentBars">
+          <span class="hbar-label" [title]="bar.label">
+            {{ bar.label }}<small *ngIf="bar.sub">{{ bar.sub }}</small>
+          </span>
+          <span class="hbar-track">
+            <span class="hbar-fill" [style.width.%]="bar.width" [style.background]="COLOR.brand"></span>
+          </span>
+          <span class="hbar-value">{{ bar.value }}</span>
+        </div>
+        <p class="empty-line" *ngIf="agentBars.length === 0">No validations in this range.</p>
+      </div>
+
+      <table class="data-table" *ngIf="showAgentTable">
+        <thead><tr><th>Agent</th><th>Total</th><th>Validated</th><th>Rejected</th><th>Avg time</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let a of agents">
+            <td>{{ a.agentName || a.agentId }}</td><td>{{ a.total }}</td><td>{{ a.accepted }}</td>
+            <td>{{ a.rejected }}</td><td>{{ a.averageProcessingTime | number:'1.1-1' }}s</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Rejection reasons -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Why cheques were rejected</h2>
+          <p>Each label names the exact check that failed</p>
+        </div>
+      </div>
+      <div class="hbar" *ngFor="let bar of reasonBars">
+        <span class="hbar-label wide" [title]="bar.label">{{ bar.label }}</span>
+        <span class="hbar-track">
+          <span class="hbar-fill" [style.width.%]="bar.width" [style.background]="COLOR.rejected"></span>
+        </span>
+        <span class="hbar-value">{{ bar.value }}</span>
+      </div>
+      <p class="empty-line" *ngIf="reasonBars.length === 0">No rejections in this range.</p>
+    </section>
+  </div>
+
+  <!-- Validation oversight -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Validation oversight</h2>
+        <p>Click a row to read the full reason, then confirm or overturn the agent's decision</p>
+      </div>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Cheque no.</th><th>Account holder</th><th>Ceiling</th>
+          <th>Signature</th><th>Agent</th><th>Status</th><th>Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let c of recent">
+          <tr class="clickable" (click)="toggleDetail(c)">
+            <td class="mono">{{ c.chequeNumber || '—' }}</td>
+            <td>{{ c.issuerName || '—' }}</td>
+            <td>{{ c.plafond ? money(c.plafond) + ' DT' : '—' }}</td>
+            <td>{{ c.signatureScore != null ? (c.signatureScore * 100 | number:'1.0-0') + '%' : '—' }}</td>
+            <td>{{ agentName(c) }}</td>
+            <td><span class="badge" [ngClass]="statusClass(c.status)">{{ c.status }}</span></td>
+            <td class="actions" (click)="$event.stopPropagation()">
+              <button class="mini-btn ok" (click)="decide(c, 'ACCEPTED')" [disabled]="c.status === 'ACCEPTED'">Validate</button>
+              <button class="mini-btn ko" (click)="decide(c, 'REJECTED')" [disabled]="c.status === 'REJECTED'">Reject</button>
+            </td>
+          </tr>
+          <tr *ngIf="expanded === c.id" class="detail-row">
+            <td colspan="7">
+              <div class="detail-grid">
+                <div><span>Reason</span><b>{{ c.rejectionReason || 'No issue recorded — all checks passed.' }}</b></div>
+                <div><span>Holder RIB</span><b class="mono">{{ c.issuerRib || '—' }}</b></div>
+                <div><span>Beneficiary RIB</span><b class="mono">{{ c.beneficiaryRib || '—' }}</b></div>
+                <div><span>Expiry</span><b>{{ c.expiryDate || '—' }}</b></div>
+                <div><span>Amount read</span><b>{{ c.amountWritten ? money(c.amountWritten) + ' DT' : 'not readable' }}</b></div>
+                <div><span>Processed</span><b>{{ c.validatedAt | date:'dd/MM/yyyy HH:mm:ss' }}</b></div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+    <p class="empty-line" *ngIf="recent.length === 0">No validations recorded yet.</p>
+  </section>
+
+  <!-- Agent management -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Agent accounts</h2>
+        <p>Suspend or reinstate an account — accounts are never deleted</p>
+      </div>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr><th>Email</th><th>Name</th><th>Role</th><th>Last sign-in</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of users">
+          <td class="mono">{{ u.email }}</td>
+          <td>{{ u.firstName }} {{ u.lastName }}</td>
+          <td><span class="badge badge-neutral">{{ u.role }}</span></td>
+          <td>{{ u.lastLogin ? (u.lastLogin | date:'dd/MM/yyyy HH:mm') : 'never' }}</td>
+          <td><span class="badge" [ngClass]="u.status === 'ACTIVE' ? 'badge-success' : 'badge-error'">{{ u.status }}</span></td>
+          <td class="actions">
+            <button class="mini-btn" (click)="toggleUser(u)">
+              {{ u.status === 'ACTIVE' ? 'Suspend' : 'Reinstate' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="empty-line" *ngIf="users.length === 0">Authentication service unreachable (port 8081).</p>
+  </section>
+
+</div>

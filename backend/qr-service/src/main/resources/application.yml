@@ -1,0 +1,25 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: QR-SERVICE
+  servlet:
+    multipart:
+      # Photos of cheques taken with a phone routinely exceed the 1MB default.
+      max-file-size: 15MB
+      max-request-size: 20MB
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:eureka123@localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+
+python:
+  # Leave blank to auto-detect (python / py / python3).
+  command: ""
+  script:
+    reader: src/main/python/scripts/qr_reader.py
+    verifier: src/main/python/scripts/cheque_verifier.py

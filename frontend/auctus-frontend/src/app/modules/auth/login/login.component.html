@@ -1,0 +1,157 @@
+<div class="login-shell">
+  <!-- Depth is built from three drifting light pools over a navy ground, so the
+       page reads as a lit space rather than a flat panel. -->
+  <div class="bg-base"></div>
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+  <div class="aurora a3"></div>
+  <div class="grid-floor"></div>
+
+  <div class="login-grid">
+
+    <!-- ------------------------------------------------ brand + 3D crest -->
+    <section class="brand-col">
+      <div class="brand-head">
+        <div class="brand-lockup">
+          <svg class="brand-glyph" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <rect width="48" height="48" rx="14" fill="url(#auGrad)"/>
+            <path d="M24 13l9 4v8c0 5.5-3.8 10.3-9 11.6C18.8 35.3 15 30.5 15 25v-8l9-4z"
+                  fill="#fff" fill-opacity=".92"/>
+            <path d="M20 24.5l3 3 5.5-6" stroke="#2F4156" stroke-width="2.4"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="auGrad" x1="0" y1="0" x2="48" y2="48">
+                <stop stop-color="#C8D9E6"/><stop offset="1" stop-color="#87A8C2"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div>
+            <h2 class="brand-name">AUCTUS</h2>
+            <p class="brand-sub">Validation System</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- The WebGL crest. The static glyph above stands in if three fails to
+           load or the visitor has asked for reduced motion. -->
+      <div class="crest-stage">
+        <app-hero-shield></app-hero-shield>
+      </div>
+
+      <div class="brand-copy">
+        <span class="eyebrow">Intelligent Banking Validation</span>
+        <h1 class="brand-title">Complete cheque<br><em>validation solution</em></h1>
+        <p class="brand-lede">
+          Automate and secure your cheque processing with signature forensics,
+          QR provenance and a full audit trail.
+        </p>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><span class="m-val">1.2k+</span><span class="m-lab">Documents processed</span></div>
+        <div class="metric"><span class="m-val">99.8%</span><span class="m-lab">Accuracy rate</span></div>
+        <div class="metric"><span class="m-val">24/7</span><span class="m-lab">Availability</span></div>
+      </div>
+
+      <div class="trust">
+        <span class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          ISO 27001 certified
+        </span>
+        <span class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          End-to-end encrypted
+        </span>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- sign-in -->
+    <section class="form-col">
+      <div class="login-card au-enter">
+        <header class="card-head">
+          <span class="access-chip">SECURE ACCESS</span>
+          <h3 class="card-title">Sign in</h3>
+          <p class="card-sub">Access your validation interface</p>
+        </header>
+
+        <form (ngSubmit)="onSubmit()" novalidate>
+          <div class="field">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/>
+              </svg>
+            </span>
+            <input type="email" id="email" name="email" [(ngModel)]="email"
+                   class="field-input" placeholder=" " autocomplete="email" required>
+            <label for="email" class="field-label">Email address</label>
+          </div>
+
+          <div class="field">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>
+            <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
+                   [(ngModel)]="password" class="field-input" placeholder=" "
+                   autocomplete="current-password" required>
+            <label for="password" class="field-label">Password</label>
+            <button type="button" class="pw-toggle" (click)="togglePasswordVisibility()"
+                    [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+              <svg *ngIf="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18 18 0 0 1-2.4 3.36M6.6 6.6A18 18 0 0 0 2 11s3.6 7 10 7a9 9 0 0 0 5.4-1.6"/>
+                <path d="m2 2 20 20"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="options">
+            <label class="checkbox">
+              <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe">
+              <span class="box" aria-hidden="true"></span>
+              <span>Remember me</span>
+            </label>
+            <a href="#" class="forgot">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="au-btn au-btn-primary submit" [disabled]="isLoading">
+            <span *ngIf="isLoading" class="spinner" aria-hidden="true"></span>
+            <span>{{ isLoading ? 'Connecting…' : 'Sign in' }}</span>
+            <svg *ngIf="!isLoading" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" class="arrow" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+          </button>
+
+          <div class="error" *ngIf="errorMessage" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>
+            </svg>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <div class="divider"><span>Secure platform</span></div>
+
+          <button type="button" class="au-btn au-btn-ghost support">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+            </svg>
+            <span>Technical support</span>
+          </button>
+
+          <footer class="card-foot">
+            <span class="conn"><span class="dot" aria-hidden="true"></span>Secure connection</span>
+            <span class="tls">TLS 1.3</span>
+          </footer>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>

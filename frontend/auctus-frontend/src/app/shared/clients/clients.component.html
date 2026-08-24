@@ -1,0 +1,261 @@
+<div class="clients-container">
+
+  <header class="clients-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="goToDashboard()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Retour au tableau de bord
+      </button>
+      <div class="page-title">
+        <h1>Consultation Client</h1>
+        <p>Rechercher par RIB, nom, CIN ou numéro de compte</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="agent-info">
+        <div class="agent-avatar">{{ getInitials() }}</div>
+        <div class="agent-details">
+          <span class="agent-name">{{ userName }}</span>
+          <span class="agent-role">Agent bancaire</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search -->
+  <div class="search-card">
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text"
+               [(ngModel)]="searchTerm"
+               (keyup.enter)="search()"
+               placeholder="Ex : 21003082079830549414, AMIRA FERCHICHI, 31445111…"
+               autocomplete="off">
+        <button *ngIf="searchTerm" class="clear-input" (click)="clearSearch()" title="Effacer">×</button>
+      </div>
+      <button class="search-btn" (click)="search()" [disabled]="isSearching || !searchTerm.trim()">
+        <span *ngIf="!isSearching">Rechercher</span>
+        <span *ngIf="isSearching">Recherche…</span>
+      </button>
+    </div>
+    <p class="search-hint">
+      Le RIB inscrit sur le chèque appartient toujours à un client existant : c'est ce lien qui
+      permet de vérifier la provision et la signature.
+    </p>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
+
+  <div class="layout">
+
+    <!-- Results list -->
+    <aside class="results-panel" *ngIf="results.length > 0">
+      <div class="panel-head">
+        <span>{{ results.length }} résultat<span *ngIf="results.length > 1">s</span></span>
+      </div>
+      <ul class="results-list">
+        <li *ngFor="let c of results"
+            [class.active]="selected?.clientId === c.clientId"
+            (click)="select(c)">
+          <div class="result-name">{{ c.fullName }}</div>
+          <div class="result-rib">{{ formatRib(c.rib) }}</div>
+          <div class="result-meta">
+            <span>{{ c.city }}</span>
+            <span class="result-balance">{{ formatMoney(c.balance) }} DT</span>
+          </div>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Empty state -->
+    <div class="empty-state" *ngIf="hasSearched && results.length === 0 && !isSearching && !errorMessage">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+        </svg>
+      </div>
+      <h3>Aucun client trouvé</h3>
+      <p>Vérifiez le RIB, le nom, la CIN ou le numéro de compte saisi.</p>
+    </div>
+
+    <!-- Client detail -->
+    <section class="detail-panel" *ngIf="selected">
+
+      <div class="detail-head">
+        <div>
+          <h2>{{ selected.fullName }}</h2>
+          <span class="client-id">{{ selected.clientId }}</span>
+        </div>
+        <div class="head-badges">
+          <span class="badge" [ngClass]="selected.status === 'ACTIVE' ? 'badge-success' : 'badge-error'">
+            {{ selected.status }}
+          </span>
+          <span class="badge badge-warning" *ngIf="selected.minor">MINEUR</span>
+        </div>
+      </div>
+
+      <!-- Account summary -->
+      <div class="account-strip">
+        <div class="account-item">
+          <span class="k">Solde disponible</span>
+          <span class="v v-balance">{{ formatMoney(selected.balance) }} DT</span>
+        </div>
+        <div class="account-item">
+          <span class="k">RIB</span>
+          <span class="v v-mono">{{ formatRib(selected.rib) }}</span>
+        </div>
+        <div class="account-item">
+          <span class="k">N° de compte</span>
+          <span class="v v-mono">{{ selected.accountNumber }}</span>
+        </div>
+        <div class="account-item">
+          <span class="k">Type de compte</span>
+          <span class="v">{{ selected.accountType }}</span>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+
+        <!-- Identity -->
+        <div class="card">
+          <h3>Identité</h3>
+          <div class="row"><span class="label">Nom complet</span><span class="value">{{ selected.fullName }}</span></div>
+          <div class="row"><span class="label">CIN</span><span class="value v-mono">{{ selected.cin }}</span></div>
+          <div class="row"><span class="label">Date de naissance</span><span class="value">{{ selected.birthDate }}</span></div>
+          <div class="row"><span class="label">Âge</span><span class="value">{{ selected.age }} ans</span></div>
+          <div class="row"><span class="label">Ville</span><span class="value">{{ selected.city }}</span></div>
+          <div class="row"><span class="label">Adresse</span><span class="value">{{ selected.address }}</span></div>
+          <div class="row"><span class="label">Téléphone</span><span class="value v-mono">{{ selected.phone }}</span></div>
+          <div class="row"><span class="label">Email</span><span class="value">{{ selected.email }}</span></div>
+          <ng-container *ngIf="selected.minor">
+            <div class="row row-highlight"><span class="label">Tuteur légal</span><span class="value">{{ selected.guardianName }}</span></div>
+            <div class="row row-highlight"><span class="label">CIN du tuteur</span><span class="value v-mono">{{ selected.guardianCin }}</span></div>
+          </ng-container>
+        </div>
+
+        <!-- Signature specimen -->
+        <div class="card">
+          <h3>Spécimen de signature</h3>
+          <p class="card-hint">
+            Signature déposée du client. À comparer visuellement avec le chèque lorsque la
+            vérification automatique n'est pas concluante.
+          </p>
+          <div class="signature-box">
+            <img *ngIf="signatureUrl" [src]="signatureUrl" alt="Spécimen de signature">
+            <div *ngIf="!signatureUrl" class="signature-missing">Spécimen indisponible</div>
+          </div>
+          <div class="row"><span class="label">Référence</span>
+            <span class="value v-mono">{{ selected.signatureDossier }}/{{ selected.signatureImage }}</span></div>
+          <div class="row"><span class="label">Agence</span><span class="value">{{ selected.agencyName }}</span></div>
+        </div>
+
+        <!-- Funds check -->
+        <div class="card">
+          <h3>Vérification de provision</h3>
+          <p class="card-hint">Le compte peut-il honorer un chèque d'un montant donné ?</p>
+          <div class="funds-row">
+            <input type="number" [(ngModel)]="fundsAmount" placeholder="Montant en DT" min="1">
+            <button class="funds-btn" (click)="checkFunds()" [disabled]="fundsChecking || !fundsAmount">
+              Vérifier
+            </button>
+          </div>
+          <div *ngIf="fundsResult" class="funds-result"
+               [ngClass]="fundsResult.sufficient ? 'funds-ok' : 'funds-ko'">
+            <strong>{{ fundsResult.status }}</strong>
+            <span>{{ fundsResult.message }}</span>
+            <span *ngIf="fundsResult.shortfall && fundsResult.shortfall > 0" class="shortfall">
+              Manque : {{ formatMoney(fundsResult.shortfall) }} DT
+            </span>
+          </div>
+        </div>
+
+        <!-- Work outstanding on this client -->
+        <div class="card card-wide">
+          <h3>Tâches en cours sur ce client</h3>
+          <p class="card-hint">
+            Travail assigné par l'administrateur ou un collègue. Ouvrez une tâche pour
+            effectuer l'opération (changement de compte, dossier de crédit, chéquier…).
+          </p>
+
+          <table *ngIf="clientTasks.length > 0" class="cheques-table">
+            <thead>
+              <tr><th>Tâche</th><th>Assignée à</th><th>Échéance</th><th>Statut</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of clientTasks">
+                <td>{{ row.task.title }}</td>
+                <td>{{ row.task.assignedToName }}</td>
+                <td>{{ row.task.dueAt ? (row.task.dueAt | date:'dd/MM HH:mm') : '—' }}</td>
+                <td><span class="badge" [ngClass]="taskStatusClass(row.task.status)">{{ row.task.status }}</span></td>
+                <td><button class="open-task-btn" (click)="openTask(row)">Ouvrir</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="no-cheques" *ngIf="clientTasks.length === 0">Aucune tâche en cours.</p>
+        </div>
+
+        <!-- Audit trail -->
+        <div class="card card-wide" *ngIf="clientOps.length > 0">
+          <h3>Historique du dossier</h3>
+          <p class="card-hint">Toute modification apportée à ce client, avec son auteur.</p>
+          <table class="cheques-table">
+            <thead><tr><th>Opération</th><th>Avant</th><th>Après</th><th>Par</th><th>Le</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let o of clientOps">
+                <td>{{ o.operation }}</td>
+                <td>{{ o.previousValue || '—' }}</td>
+                <td>{{ o.newValue || '—' }}</td>
+                <td>{{ o.performedByName || '—' }}</td>
+                <td>{{ o.performedAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cheques linked to this account -->
+        <div class="card card-wide">
+          <h3>Chèques validés sur ce compte</h3>
+          <p class="card-hint">
+            Chèques dont le RIB émetteur correspond à ce client — la preuve que l'image du
+            chèque et la fiche client désignent bien la même personne.
+          </p>
+
+          <div *ngIf="chequesLoading" class="loading-line">Chargement…</div>
+
+          <div *ngIf="!chequesLoading && clientCheques.length === 0" class="no-cheques">
+            Aucun chèque encore validé pour ce compte.
+          </div>
+
+          <table *ngIf="!chequesLoading && clientCheques.length > 0" class="cheques-table">
+            <thead>
+              <tr>
+                <th>N° chèque</th>
+                <th>Plafond</th>
+                <th>Montant lu</th>
+                <th>Expiration</th>
+                <th>Signature</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ch of clientCheques">
+                <td class="v-mono">{{ ch.chequeNumber }}</td>
+                <td>{{ formatMoney(ch.plafond) }} DT</td>
+                <td>{{ ch.amountWritten ? formatMoney(ch.amountWritten) + ' DT' : '—' }}</td>
+                <td>{{ ch.expiryDate }}</td>
+                <td>{{ ch.signatureScore !== null && ch.signatureScore !== undefined ? (ch.signatureScore * 100 | number:'1.0-0') + '%' : '—' }}</td>
+                <td><span class="badge" [ngClass]="statusClass(ch.status)">{{ ch.status }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</div>

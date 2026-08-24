@@ -1,0 +1,32 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: SIGNATURE-SERVICE
+  servlet:
+    multipart:
+      # Photos of cheques taken with a phone routinely exceed the 1MB default.
+      max-file-size: 15MB
+      max-request-size: 20MB
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:eureka123@localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+
+python:
+  # Leave blank to auto-detect (python / py / python3).
+  command: ${PYTHON_COMMAND:}
+  script:
+    matcher: src/main/python/scripts/signature_matcher.py
+
+signature:
+  # Relative to the repository by default; override AUCTUS_DATA_DIR to use a
+  # dataset kept outside it.
+  reference-folder: ${AUCTUS_DATA_DIR:../../cheque_generator}/signatures/extract
+  csv:
+    # Master client file: maps a client (by RIB or name) to their enrolled signature.
+    path: ${AUCTUS_DATA_DIR:../../cheque_generator}/output/clients_master.csv

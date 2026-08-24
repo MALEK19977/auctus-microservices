@@ -1,0 +1,295 @@
+/* Login — the one page a visitor sees before they trust us, so it carries the
+   heaviest depth treatment on the platform: a lit navy space, a real WebGL
+   crest, and a single calm white card to act in. */
+
+.login-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--navy-900);
+}
+
+/* ---------------------------------------------------------- lit backdrop -- */
+
+.bg-base {
+  position: absolute; inset: 0;
+  background: var(--grad-hero);
+  opacity: 0.96;
+}
+
+/* Three slow light pools. Each drifts on its own clock so the ground never
+   repeats a pattern the eye can lock on to. */
+.aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  will-change: transform;
+}
+.a1 {
+  width: 46vw; height: 46vw; top: -12%; left: -8%;
+  background: radial-gradient(circle, rgba(200,217,230,.55), transparent 68%);
+  animation: auDrift 26s var(--ease) infinite;
+}
+.a2 {
+  width: 38vw; height: 38vw; bottom: -14%; right: -6%;
+  background: radial-gradient(circle, rgba(135,168,194,.5), transparent 70%);
+  animation: auDrift 34s var(--ease) infinite reverse;
+}
+.a3 {
+  width: 30vw; height: 30vw; top: 34%; left: 42%;
+  background: radial-gradient(circle, rgba(245,239,235,.3), transparent 72%);
+  animation: auDrift 42s var(--ease) infinite;
+}
+
+/* A fine grid laid into perspective. It gives the space a floor. */
+.grid-floor {
+  position: absolute; inset: auto 0 0 0; height: 46vh;
+  background-image:
+    linear-gradient(rgba(200,217,230,.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,217,230,.16) 1px, transparent 1px);
+  background-size: 54px 54px;
+  transform: perspective(340px) rotateX(62deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, #000 5%, transparent 85%);
+  -webkit-mask-image: linear-gradient(to top, #000 5%, transparent 85%);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------- skeleton -- */
+
+.login-grid {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 40px;
+  max-width: 1440px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 44px 48px;
+  align-items: center;
+}
+
+/* ----------------------------------------------------------- brand side -- */
+
+.brand-col { color: var(--ink-invert); display: flex; flex-direction: column; gap: 26px; }
+
+.brand-lockup { display: flex; align-items: center; gap: 14px; }
+.brand-glyph { width: 46px; height: 46px; flex: none; }
+.brand-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 22px; font-weight: 800; letter-spacing: .16em;
+  color: var(--ink-invert); line-height: 1;
+}
+.brand-sub { font-size: 12px; color: var(--sky-300); letter-spacing: .05em; margin-top: 3px; }
+
+/* The WebGL stage. Sized in vh so the crest stays generous on tall screens
+   without ever pushing the copy below the fold. */
+.crest-stage {
+  height: clamp(220px, 30vh, 320px);
+  margin: -8px 0 -4px;
+}
+
+.eyebrow {
+  display: inline-block;
+  padding: 6px 14px; border-radius: var(--r-pill);
+  background: rgba(200,217,230,.14);
+  border: 1px solid rgba(200,217,230,.3);
+  color: var(--sky-300);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+}
+.brand-title {
+  margin: 16px 0 12px;
+  font-size: clamp(30px, 3.5vw, 46px);
+  line-height: 1.12; font-weight: 700;
+  color: var(--ink-invert);
+}
+.brand-title em {
+  font-style: normal;
+  background: linear-gradient(100deg, var(--sky-300), var(--beige-100));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.brand-lede { max-width: 46ch; font-size: 14.5px; line-height: 1.65; color: rgba(255,255,255,.72); }
+
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 480px; }
+.metric {
+  padding: 14px 16px; border-radius: var(--r-md);
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(200,217,230,.2);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: transform var(--base) var(--ease), box-shadow var(--base) var(--ease),
+              background var(--base) var(--ease);
+}
+.metric:hover {
+  transform: translateY(-3px);
+  background: rgba(255,255,255,.12);
+  box-shadow: var(--glow-sky);
+}
+.m-val { display: block; font-size: 21px; font-weight: 800; color: var(--ink-invert); }
+.m-lab { display: block; margin-top: 3px; font-size: 10.5px; letter-spacing: .05em;
+         text-transform: uppercase; color: var(--sky-300); }
+
+.trust { display: flex; flex-wrap: wrap; gap: 20px; }
+.trust-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: rgba(255,255,255,.66);
+}
+.trust-item svg { width: 15px; height: 15px; color: var(--sky-300); flex: none; }
+
+/* ------------------------------------------------------------ form side -- */
+
+.form-col { display: flex; justify-content: center; }
+
+.login-card {
+  width: 100%; max-width: 428px;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  padding: 36px 34px;
+  /* A beige-warmed shadow rather than a grey one, per the brief. */
+  box-shadow: 0 38px 70px -34px rgba(27,40,54,.62),
+              0 0 0 1px rgba(245,239,235,.5),
+              0 2px 0 rgba(255,255,255,.9) inset;
+}
+
+.access-chip {
+  display: inline-block; padding: 5px 12px; border-radius: var(--r-pill);
+  background: var(--sky-200); color: var(--navy-700);
+  font-size: 10px; font-weight: 800; letter-spacing: .12em;
+}
+.card-title { margin: 14px 0 5px; font-size: 27px; }
+.card-sub { font-size: 13.5px; color: var(--ink-muted); margin-bottom: 26px; }
+
+/* Floating-label field. The label rides up when the input holds a value or has
+   focus; the ` ` placeholder is what makes :placeholder-shown reliable. */
+.field { position: relative; margin-bottom: 18px; }
+.field-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: var(--ink-faint);
+  transition: color var(--base) var(--ease); pointer-events: none; z-index: 1;
+}
+.field-icon svg { width: 100%; height: 100%; }
+.field-input {
+  width: 100%; padding: 15px 44px 15px 42px;
+  border: 1.5px solid var(--line-strong); border-radius: var(--r-md);
+  background: var(--surface-2); color: var(--ink);
+  font-family: inherit; font-size: 14px; outline: none;
+  transition: border-color var(--base) var(--ease), box-shadow var(--base) var(--ease),
+              background var(--base) var(--ease);
+}
+.field-input:focus { border-color: var(--sky-400); background: var(--surface); box-shadow: var(--ring-sky); }
+.field-input:focus ~ .field-icon { color: var(--navy-600); }
+
+.field-label {
+  position: absolute; left: 42px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: var(--ink-faint);
+  pointer-events: none;
+  transition: all var(--base) var(--ease);
+}
+.field-input:focus ~ .field-label,
+.field-input:not(:placeholder-shown) ~ .field-label {
+  top: 0; left: 12px; transform: translateY(-50%);
+  padding: 0 6px; background: var(--surface);
+  font-size: 11px; font-weight: 600; color: var(--navy-600);
+  border-radius: 3px;
+}
+
+.pw-toggle {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; padding: 6px;
+  display: grid; place-items: center;
+  background: none; border: none; border-radius: var(--r-sm);
+  color: var(--ink-faint); cursor: pointer;
+  transition: color var(--base) var(--ease), background var(--base) var(--ease);
+}
+.pw-toggle:hover { color: var(--navy-700); background: var(--sky-100); }
+.pw-toggle svg { width: 17px; height: 17px; }
+
+.options { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 22px; }
+.checkbox { display: inline-flex; align-items: center; gap: 9px; font-size: 13px;
+            color: var(--ink-muted); cursor: pointer; }
+.checkbox input { position: absolute; opacity: 0; width: 0; height: 0; }
+.box {
+  width: 17px; height: 17px; border-radius: 5px;
+  border: 1.5px solid var(--line-strong); background: var(--surface-2);
+  display: grid; place-items: center;
+  transition: all var(--base) var(--ease);
+}
+.box::after {
+  content: ''; width: 4px; height: 8px; margin-top: -2px;
+  border: solid var(--ink-invert); border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0); transition: transform var(--base) var(--ease-out-back);
+}
+.checkbox input:checked ~ .box { background: var(--navy-700); border-color: var(--navy-700); }
+.checkbox input:checked ~ .box::after { transform: rotate(45deg) scale(1); }
+.checkbox input:focus-visible ~ .box { box-shadow: var(--ring-sky); }
+
+.forgot { font-size: 12.5px; font-weight: 600; color: var(--navy-600); }
+.forgot:hover { color: var(--navy-700); text-decoration: underline; }
+
+.submit { width: 100%; padding: 15px; font-size: 14.5px; }
+.submit .arrow { width: 17px; height: 17px; transition: transform var(--base) var(--ease); }
+.submit:hover:not(:disabled) .arrow { transform: translateX(4px); }
+
+.spinner {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35); border-top-color: var(--ink-invert);
+  animation: auSpin .7s linear infinite;
+}
+
+.error {
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 14px; padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: var(--bad-bg); color: var(--bad-ink);
+  border: 1px solid rgba(163,74,66,.22);
+  font-size: 13px; animation: auRise var(--base) var(--ease) both;
+}
+.error svg { width: 17px; height: 17px; flex: none; }
+
+.divider { position: relative; text-align: center; margin: 24px 0 16px; }
+.divider::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px;
+  background: var(--line);
+}
+.divider span {
+  position: relative; padding: 0 14px; background: var(--surface);
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint);
+}
+
+.support { width: 100%; padding: 13px; }
+.support svg { width: 16px; height: 16px; }
+
+.card-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 11.5px; color: var(--ink-muted);
+}
+.conn { display: inline-flex; align-items: center; gap: 7px; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+  animation: auPulse 2.4s var(--ease) infinite;
+}
+.tls {
+  padding: 3px 9px; border-radius: var(--r-sm);
+  background: var(--sky-200); color: var(--navy-700);
+  font-size: 10px; font-weight: 700; letter-spacing: .05em;
+}
+
+/* ----------------------------------------------------------- responsive -- */
+
+@media (max-width: 1100px) {
+  .login-grid { grid-template-columns: 1fr; gap: 30px; padding: 34px 26px; }
+  .brand-col { text-align: center; align-items: center; }
+  .brand-lede { margin: 0 auto; }
+  .crest-stage { height: 240px; width: 100%; max-width: 340px; margin: 0 auto; }
+  .trust { justify-content: center; }
+}
+
+@media (max-width: 560px) {
+  .login-grid { padding: 24px 16px; }
+  .login-card { padding: 28px 22px; }
+  .metrics { grid-template-columns: 1fr; max-width: 100%; }
+  .crest-stage { height: 190px; }
+  .grid-floor { display: none; }
+}

@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: AUTH-SERVICE
+  datasource:
+    # Every value can be overridden from the environment. The defaults suit a
+    # local developer database only - never a deployed one.
+    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:eureka123@localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+
+jwt:
+  # No signing key is committed. Set JWT_SECRET before starting the service;
+  # a key in source control is a key that has already leaked.
+  # Generate one with:  openssl rand -hex 32
+  secret: ${JWT_SECRET:}
+  expiration: ${JWT_EXPIRATION:3600000}

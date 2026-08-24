@@ -1,0 +1,98 @@
+# ============================================================================
+#  AUCTUS - files that must never reach the repository
+# ============================================================================
+
+# ---- Build output ----------------------------------------------------------
+# target/ also holds a compiled copy of every application.yml, so leaving it in
+# would publish the credentials a second time even after the sources are clean.
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# ---- Secrets and local configuration ---------------------------------------
+# Real values live in these; only the .example templates are committed.
+**/application-local.yml
+**/application-local.properties
+**/application-secrets.yml
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+credentials.json
+secrets.json
+
+# ---- Node / Angular --------------------------------------------------------
+node_modules/
+dist/
+.angular/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# ---- Uploaded and generated content ----------------------------------------
+# Client documents, cheque photos and voice notes: real customer data.
+uploads/
+backend/uploads/
+*.log
+logs/
+
+# Debug images written by the signature and QR pipelines during tuning.
+**/debug_*.png
+**/dbg_*.png
+
+# ---- Datasets --------------------------------------------------------------
+# Generated cheque images and the client master file are large and contain
+# synthetic personal data (names, CINs, RIBs, balances). Regenerate them with
+# the scripts in cheque_generator/ instead of committing them.
+cheque_generator/output/
+cheque_generator/signatures/
+*.csv
+!**/sample_*.csv
+
+# Signature specimens are biometric personal data. They stay on the machine
+# that holds them, wherever a copy of the dataset ends up in the tree.
+**/signatures/extract/
+backend/signatures/
+
+# ---- IDE and OS ------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Uploaded files --------------------------------------------------------
+# Voice notes, scanned identity documents, payslips and photos of cheques that
+# agents attach to tasks and messages. These are real customer files and must
+# never leave the machine that received them.
+uploads/
+**/uploads/
+
+# ---- Local tooling ---------------------------------------------------------
+# These carry absolute Windows paths specific to one machine.
+*.local.bat
+scratch/
+tmp/

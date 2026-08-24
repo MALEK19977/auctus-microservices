@@ -1,0 +1,40 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: CHEQUE-SERVICE
+  servlet:
+    multipart:
+      # Photos of cheques taken with a phone routinely exceed the 1MB default.
+      max-file-size: 15MB
+      max-request-size: 20MB
+  datasource:
+    url: ${CHEQUE_DB_URL:jdbc:postgresql://localhost:5432/cheque_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:eureka123@localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+
+services:
+  ocr:
+    url: ${OCR_SERVICE_URL:http://localhost:8083}
+  qr:
+    url: ${QR_SERVICE_URL:http://localhost:8084}
+  signature:
+    url: ${SIGNATURE_SERVICE_URL:http://localhost:8085}
+  client:
+    url: ${CLIENT_SERVICE_URL:http://localhost:8086}
+
+signature:
+  threshold: ${SIGNATURE_THRESHOLD:0.72}

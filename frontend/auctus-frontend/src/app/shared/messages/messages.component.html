@@ -1,0 +1,225 @@
+<div class="chat-shell">
+
+  <!-- rail -->
+  <aside class="rail">
+    <div class="rail-head">
+      <button class="rail-back" (click)="goBack()" title="Back to dashboard" aria-label="Back to dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="rail-title">
+        <h1>Chat</h1>
+        <span class="conn" [class.on]="connected">
+          <i></i>{{ connected ? 'Live' : 'Reconnecting…' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="rail-actions">
+      <button class="action" [class.active]="panel === 'direct'"
+              (click)="panel = panel === 'direct' ? 'none' : 'direct'">
+        <span class="ico">＋</span> New chat
+      </button>
+      <button class="action" [class.active]="panel === 'group'" *ngIf="isAdmin"
+              (click)="panel = panel === 'group' ? 'none' : 'group'">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span> New group
+      </button>
+    </div>
+
+    <!-- new direct -->
+    <div class="panel-box" *ngIf="panel === 'direct'">
+      <p class="panel-hint">Start a conversation with:</p>
+      <button class="person" *ngFor="let c of contacts" (click)="startDirect(c)" [disabled]="creating">
+        <span class="avatar sm" [style.background]="avatarTint(c.firstName + ' ' + c.lastName)">
+          {{ initials(c.firstName + ' ' + c.lastName) }}
+        </span>
+        <span class="person-meta">
+          <b>{{ c.firstName }} {{ c.lastName }}</b>
+          <small>{{ c.role }}</small>
+        </span>
+      </button>
+      <p class="muted" *ngIf="contacts.length === 0">No other active accounts.</p>
+    </div>
+
+    <!-- new group -->
+    <div class="panel-box" *ngIf="panel === 'group'">
+      <p class="panel-hint">Name the group and pick at least two colleagues.</p>
+
+      <input class="group-input" type="text" [(ngModel)]="groupName"
+             name="groupName" placeholder="Group name — e.g. Cheque escalations">
+
+      <label class="person pick" *ngFor="let c of contacts; let i = index">
+        <input type="checkbox" [ngModel]="!!groupPicks[c.id]"
+               (ngModelChange)="togglePick(c.id, $event)" [name]="'pick' + i">
+        <span class="avatar sm" [style.background]="avatarTint(c.firstName + ' ' + c.lastName)">
+          {{ initials(c.firstName + ' ' + c.lastName) }}
+        </span>
+        <span class="person-meta">
+          <b>{{ c.firstName }} {{ c.lastName }}</b>
+          <small>{{ c.role }}</small>
+        </span>
+      </label>
+
+      <p class="muted" *ngIf="contacts.length === 0">
+        No other active accounts to add.
+      </p>
+
+      <!-- Says exactly what is still missing instead of failing silently. -->
+      <p class="need" *ngIf="groupBlocker">{{ groupBlocker }}</p>
+
+      <button class="create-btn" (click)="createGroup()"
+              [disabled]="creating || !!groupBlocker">
+        {{ creating ? 'Creating…' : 'Create group (' + (pickedCount + 1) + ' people)' }}
+      </button>
+    </div>
+
+    <!-- conversation list -->
+    <ul class="conv-list" *ngIf="panel === 'none'">
+      <li *ngFor="let c of conversations" [class.active]="active?.id === c.id" (click)="open(c)">
+        <span class="avatar" [class.group]="c.type === 'GROUP'" [style.background]="avatarTint(c.name)">
+          {{ c.type === 'GROUP' ? '#' : initials(c.name) }}
+        </span>
+        <span class="conv-meta">
+          <span class="conv-top">
+            <b>{{ c.name }}</b>
+            <small>{{ c.lastMessageAt | date:'dd/MM HH:mm' }}</small>
+          </span>
+          <span class="conv-preview">
+            <i *ngIf="c.lastMessageSender">{{ c.lastMessageSender }}: </i>{{ c.lastMessage || 'No messages yet' }}
+          </span>
+        </span>
+        <span class="unread" *ngIf="c.unread > 0">{{ c.unread }}</span>
+      </li>
+      <li class="muted-li" *ngIf="conversations.length === 0">
+        No conversations yet. Press <b>New chat</b><span *ngIf="isAdmin"> or <b>New group</b></span>.
+      </li>
+    </ul>
+  </aside>
+
+  <!-- thread -->
+  <section class="thread" *ngIf="active">
+    <header class="thread-head">
+      <span class="avatar" [class.group]="active.type === 'GROUP'" [style.background]="avatarTint(active.name)">
+        {{ active.type === 'GROUP' ? '#' : initials(active.name) }}
+      </span>
+      <div class="thread-id">
+        <b>{{ active.name }}</b>
+        <small *ngIf="active.type === 'GROUP'">{{ active.memberCount }} members</small>
+        <small *ngIf="active.type === 'DIRECT'">Direct message</small>
+      </div>
+      <button class="head-btn" *ngIf="active.type === 'GROUP'" (click)="showMembers = !showMembers">
+        {{ showMembers ? 'Hide members' : 'Members' }}
+      </button>
+    </header>
+
+    <!-- members drawer -->
+    <div class="members-drawer" *ngIf="showMembers && active.type === 'GROUP'">
+      <div class="member-chips">
+        <span class="chip" *ngFor="let m of active.members">
+          <span class="avatar xs" [style.background]="avatarTint(m.userName)">{{ initials(m.userName) }}</span>
+          {{ m.userName }}
+          <button *ngIf="isAdmin && m.userId !== userId" (click)="removeFromGroup(m)" title="Remove">×</button>
+        </span>
+      </div>
+      <div class="add-row" *ngIf="isAdmin && addableContacts.length > 0">
+        <span class="add-label">Add:</span>
+        <button class="add-chip" *ngFor="let c of addableContacts" (click)="addToGroup(c)">
+          + {{ c.firstName }} {{ c.lastName }}
+        </button>
+      </div>
+    </div>
+
+    <div class="thread-body">
+      <ng-container *ngFor="let m of messages; let i = index">
+        <div class="system-line" *ngIf="isSystem(m)">
+          <span>{{ m.body }}</span>
+        </div>
+
+        <div class="bubble-row" *ngIf="!isSystem(m)" [class.mine]="isMine(m)">
+          <span class="avatar xs bubble-avatar" *ngIf="!isMine(m) && active.type === 'GROUP'"
+                [style.background]="avatarTint(m.senderName)">
+            {{ initials(m.senderName) }}
+          </span>
+          <div class="bubble-col">
+            <span class="sender" *ngIf="showSender(i)">{{ m.senderName }}</span>
+            <div class="bubble" [class.has-media]="m.attachmentId">
+
+              <a *ngIf="m.attachmentKind === 'IMAGE'" [href]="attachmentUrl(m)" target="_blank">
+                <img class="shot" [src]="attachmentUrl(m)" [alt]="m.attachmentName">
+              </a>
+
+              <audio *ngIf="m.attachmentKind === 'AUDIO'" controls class="voice"
+                     [src]="attachmentUrl(m)"></audio>
+
+              <a *ngIf="m.attachmentKind === 'DOCUMENT'" class="doc-chip"
+                 [href]="attachmentUrl(m)" target="_blank">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                </svg>
+                <span>{{ m.attachmentName }}</span>
+              </a>
+
+              <p *ngIf="!m.attachmentId || m.attachmentKind === 'DOCUMENT'">{{ m.body }}</p>
+              <span class="stamp">{{ m.sentAt | date:'HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <p class="muted center" *ngIf="messages.length === 0">No messages yet — say hello.</p>
+    </div>
+
+    <div class="rec-bar" *ngIf="recording">
+      <span class="rec-dot"></span> Recording {{ recordLabel }} — press the microphone again to send
+    </div>
+    <div class="rec-bar uploading" *ngIf="uploading">Sending file…</div>
+
+    <form class="composer" (ngSubmit)="send()">
+      <label class="tool" title="Send a photo or document">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M21.4 11.05L12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.35-2.35l8.49-8.48"/>
+        </svg>
+        <input type="file" hidden (change)="onFilePicked($event)"
+               accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">
+      </label>
+      <button type="button" class="tool" [class.rec]="recording"
+              (click)="toggleRecording()" title="Record a voice note" aria-label="Record a voice note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0"/><path d="M12 19v3"/>
+        </svg>
+      </button>
+      <input type="text" [(ngModel)]="draft" name="draft"
+             placeholder="Type a message" autocomplete="off">
+      <button type="submit" [disabled]="!draft.trim() || sending" title="Send" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
+    </form>
+  </section>
+
+  <section class="thread empty-thread" *ngIf="!active">
+    <div class="empty-inner">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <h2>Your conversations</h2>
+      <p>Pick a chat on the left, or start a new one.<br>
+         Messages arrive instantly — no refresh needed.</p>
+    </div>
+  </section>
+
+  <div class="toast" *ngIf="error" (click)="error = ''" role="alert">
+    {{ error }}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+      <path d="M18 6L6 18M6 6l12 12"/>
+    </svg>
+  </div>
+</div>

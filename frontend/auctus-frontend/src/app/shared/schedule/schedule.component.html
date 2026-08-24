@@ -1,0 +1,405 @@
+<div class="board-shell">
+
+  <header class="board-header">
+    <div class="head-left">
+      <button class="back-btn" (click)="goBack()" aria-label="Back to dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1>Work queue</h1>
+        <p>Tasks passed between agents and the administrator</p>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="scope-switch">
+        <button [class.on]="scope === 'MINE'" (click)="scope = 'MINE'; load()">Assigned to me</button>
+        <button [class.on]="scope === 'ALL'" (click)="scope = 'ALL'; load()">Whole branch</button>
+      </div>
+      <button class="primary-btn" (click)="openForm()">+ Assign a task</button>
+    </div>
+  </header>
+
+  <div class="toast ok" *ngIf="notice">{{ notice }}</div>
+  <div class="toast err" *ngIf="error" (click)="error = ''" role="alert">{{ error }}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+      <path d="M18 6L6 18M6 6l12 12"/></svg>
+  </div>
+
+  <!-- create panel -->
+  <section class="form-card" *ngIf="showForm">
+    <div class="form-head">
+      <h2>Assign a task</h2>
+      <button class="close-x" (click)="showForm = false" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- 1. what kind of work -->
+    <div class="step">
+      <span class="step-no">1</span>
+      <div class="step-body">
+        <b>What kind of work is it?</b>
+        <div class="chip-row">
+          <button *ngFor="let c of categories" class="type-chip"
+                  [class.on]="form.category === c.id" (click)="form.category = c.id">
+            <span>{{ c.icon }}</span>{{ c.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. describe -->
+    <div class="step">
+      <span class="step-no">2</span>
+      <div class="step-body">
+        <b>Describe it</b>
+        <input class="in" type="text" [(ngModel)]="form.title"
+               placeholder="Task name — e.g. Verify cheque 6607009 before payout">
+        <textarea class="in" rows="2" [(ngModel)]="form.description"
+                  placeholder="What exactly needs doing? Anything the other person should know."></textarea>
+      </div>
+    </div>
+
+    <!-- 3. which client -->
+    <div class="step">
+      <span class="step-no">3</span>
+      <div class="step-body">
+        <b>Which client account? <small>optional</small></b>
+        <div class="lookup">
+          <input class="in" type="text" [(ngModel)]="clientQuery" (keyup.enter)="searchClient()"
+                 placeholder="Search by RIB, name or CIN">
+          <button class="ghost" type="button" (click)="searchClient()">Search</button>
+        </div>
+        <div class="matches" *ngIf="clientMatches.length > 0">
+          <button *ngFor="let c of clientMatches" (click)="pickClient(c)">
+            <b>{{ c.fullName }}</b><small>{{ c.rib }} · {{ c.balance }} DT</small>
+          </button>
+        </div>
+        <div class="picked" *ngIf="form.clientRib">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
+            <path d="M20 6L9 17l-5-5"/></svg>
+          {{ form.clientName }} <i>{{ form.clientRib }}</i>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. who + when -->
+    <div class="step">
+      <span class="step-no">4</span>
+      <div class="step-body">
+        <b>Who handles it, and by when?</b>
+        <div class="people-row">
+          <button *ngFor="let u of colleagues" class="person-chip"
+                  [class.on]="form.assignedToId === u.id" (click)="pickAssignee(u)">
+            {{ u.firstName }} {{ u.lastName }}<small>{{ u.role }}</small>
+          </button>
+        </div>
+        <div class="time-row">
+          <label><span>Start</span><input class="in" type="datetime-local" [(ngModel)]="form.startsAt"></label>
+          <label><span>Due</span><input class="in" type="datetime-local" [(ngModel)]="form.dueAt"></label>
+          <label><span>Priority</span>
+            <select class="in" [(ngModel)]="form.priority">
+              <option value="LOW">Low</option>
+              <option value="NORMAL">Normal</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. documents -->
+    <div class="step">
+      <span class="step-no">5</span>
+      <div class="step-body">
+        <b>Attach documents <small>optional</small></b>
+        <input type="file" multiple (change)="onFiles($event)">
+        <p class="files" *ngIf="pendingFiles.length > 0">
+          {{ pendingFiles.length }} file(s) ready: {{ pendingFiles[0].name }}<span *ngIf="pendingFiles.length > 1"> …</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="ghost" (click)="showForm = false">Cancel</button>
+      <button class="primary-btn" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Assigning…' : 'Assign task' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- board -->
+  <section class="board">
+    <div class="col" *ngFor="let col of columns">
+      <div class="col-head">
+        <div>
+          <b>{{ col.label }}</b>
+          <small>{{ col.hint }}</small>
+        </div>
+        <span class="col-count">{{ column(col.id).length }}</span>
+      </div>
+
+      <div class="col-body">
+        <article class="card" *ngFor="let row of column(col.id)"
+                 [class.overdue]="row.overdue" (click)="selected = row">
+          <div class="card-top">
+            <span class="cat">{{ categoryOf(row.task.category).icon }} {{ categoryOf(row.task.category).label }}</span>
+            <span class="pri" [ngClass]="priorityClass(row.task.priority)">{{ row.task.priority }}</span>
+          </div>
+
+          <b class="card-title">{{ row.task.title }}</b>
+
+          <div class="card-client" *ngIf="row.task.clientName">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {{ row.task.clientName }}
+          </div>
+
+          <div class="card-foot">
+            <span class="who">{{ row.task.assignedToName }}</span>
+            <span class="due" [class.late]="row.overdue">{{ dueLabel(row) }}</span>
+          </div>
+
+          <div class="card-badges">
+            <span *ngIf="row.attachments.length > 0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M21.4 11.05L12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3.33 3.33 0 0 1 4.71 4.71l-9.2 9.19a1.67 1.67 0 0 1-2.35-2.35l8.49-8.48"/></svg>
+              {{ row.attachments.length }}</span>
+          </div>
+        </article>
+
+        <p class="col-empty" *ngIf="column(col.id).length === 0">Nothing here.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- detail drawer -->
+  <aside class="drawer" *ngIf="selected" (click)="selected = null">
+    <div class="drawer-inner" [class.wide]="drawerWide" [class.full]="drawerFull"
+         (click)="$event.stopPropagation()">
+      <div class="drawer-head">
+        <span class="cat">{{ categoryOf(selected.task.category).icon }} {{ categoryOf(selected.task.category).label }}</span>
+        <div class="head-tools">
+          <button class="size-btn" (click)="cycleWidth()"
+                  [title]="drawerFull ? 'Shrink the panel' : 'Widen the panel'">
+            <svg *ngIf="drawerFull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+              <path d="M9 9L4 4M9 9V4M9 9H4"/><path d="M15 15l5 5M15 15v5M15 15h5"/></svg>
+            <svg *ngIf="!drawerFull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+              <path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+          </button>
+          <button class="close-x" (click)="selected = null" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <h2>{{ selected.task.title }}</h2>
+      <p class="desc">{{ selected.task.description || 'No further description.' }}</p>
+
+      <div class="detail-rows">
+        <div><span>Assigned to</span><b>{{ selected.task.assignedToName }}</b></div>
+        <div><span>Created by</span><b>{{ selected.task.createdByName }}</b></div>
+        <div><span>Priority</span><b>{{ selected.task.priority }}</b></div>
+        <div><span>Status</span><b>{{ selected.task.status }}</b></div>
+        <div *ngIf="selected.task.startsAt"><span>Start</span><b>{{ selected.task.startsAt | date:'dd/MM HH:mm' }}</b></div>
+        <div *ngIf="selected.task.dueAt"><span>Due</span><b [class.late]="selected.overdue">{{ selected.task.dueAt | date:'dd/MM HH:mm' }}</b></div>
+      </div>
+
+      <div class="client-box" *ngIf="selected.task.clientName">
+        <div>
+          <b>{{ selected.task.clientName }}</b>
+          <small class="mono">{{ selected.task.clientRib }}</small>
+        </div>
+        <button class="ghost" (click)="openClient(selected)">Open client file</button>
+      </div>
+
+      <div class="docs">
+        <b>Documents</b>
+        <a class="doc" *ngFor="let a of selected.attachments" [href]="fileUrl(a)" target="_blank">
+          <span class="doc-ico" [ngSwitch]="a.kind">
+            <svg *ngSwitchCase="'IMAGE'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15l-5-5-6 6-3-3-4 4"/></svg>
+            <svg *ngSwitchCase="'AUDIO'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0"/><path d="M12 19v3"/></svg>
+            <svg *ngSwitchDefault viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          </span>
+          <span class="doc-meta"><b>{{ a.fileName }}</b><small>{{ a.uploadedByName }}</small></span>
+        </a>
+        <p class="muted" *ngIf="selected.attachments.length === 0">None attached.</p>
+        <label class="upload-btn">
+          + Add a document
+          <input type="file" hidden (change)="uploadTo(selected, $event)">
+        </label>
+      </div>
+
+      <!-- Carry out the actual bank operation -->
+      <div class="ops">
+        <b>Carry out the operation</b>
+        <p class="ops-hint">These change the client file for real and are recorded in its history.</p>
+        <div class="ops-grid">
+          <button class="op" [class.on]="action === 'ACCOUNT_TYPE'" (click)="startAction('ACCOUNT_TYPE')">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M17 2l4 4-4 4"/><path d="M3 6h18"/><path d="M7 22l-4-4 4-4"/><path d="M21 18H3"/></svg></span>Change account type
+          </button>
+          <button class="op" [class.on]="action === 'STATUS'" (click)="startAction('STATUS')">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Account status
+          </button>
+          <button class="op" [class.on]="action === 'CONTACT'" (click)="startAction('CONTACT')">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>Update details
+          </button>
+          <button class="op" [class.on]="action === 'CREDIT'" (click)="startAction('CREDIT')">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg></span>Open credit file
+          </button>
+          <button class="op" [class.on]="action === 'CHEQUEBOOK'" (click)="startAction('CHEQUEBOOK')">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M5 3v18l2-1.5L9 21l2-1.5L13 21l2-1.5L17 21l2-1.5V3z"/><path d="M9 8h6M9 12h6"/></svg></span>Order chequebook
+          </button>
+        </div>
+
+        <div class="op-panel" *ngIf="action !== 'none'">
+          <div class="op-err" *ngIf="actionError">{{ actionError }}</div>
+
+          <div class="op-client" *ngIf="client">
+            <b>{{ client.fullName }}</b>
+            <span>{{ client.accountType }} · {{ client.status }} · {{ client.balance }} DT</span>
+            <span class="minor-flag" *ngIf="client.minor">MINOR — guardian: {{ client.guardianName }}</span>
+          </div>
+
+          <!-- account type -->
+          <ng-container *ngIf="action === 'ACCOUNT_TYPE' && client">
+            <p class="warn" *ngIf="minorBlockedReason">{{ minorBlockedReason }}</p>
+            <p class="ok-note" *ngIf="canConvertMinor">
+              The holder has reached 18 — converting will remove the guardian from the account.
+            </p>
+            <label class="f"><span>New type</span>
+              <select [(ngModel)]="typeForm.accountType">
+                <option value="COURANT">Courant (current)</option>
+                <option value="EPARGNE">Épargne (savings)</option>
+                <option value="PROFESSIONNEL">Professionnel</option>
+                <option value="JEUNE">Jeune (minor)</option>
+              </select>
+            </label>
+            <label class="f"><span>Reason</span>
+              <input type="text" [(ngModel)]="typeForm.reason" placeholder="e.g. Holder turned 18"></label>
+            <button class="apply" (click)="applyAccountType()" [disabled]="actionBusy">Apply change</button>
+          </ng-container>
+
+          <!-- status -->
+          <ng-container *ngIf="action === 'STATUS' && client">
+            <label class="f"><span>Status</span>
+              <select [(ngModel)]="statusForm.status">
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="BLOCKED">Blocked</option>
+                <option value="CLOSED">Closed</option>
+              </select>
+            </label>
+            <label class="f"><span>Reason <small>required unless activating</small></span>
+              <input type="text" [(ngModel)]="statusForm.reason"></label>
+            <button class="apply" (click)="applyStatus()" [disabled]="actionBusy">Apply</button>
+          </ng-container>
+
+          <!-- contact -->
+          <ng-container *ngIf="action === 'CONTACT' && client">
+            <label class="f"><span>Phone</span><input type="text" [(ngModel)]="contactForm.phone"></label>
+            <label class="f"><span>Email</span><input type="email" [(ngModel)]="contactForm.email"></label>
+            <label class="f"><span>Address</span><input type="text" [(ngModel)]="contactForm.address"></label>
+            <label class="f"><span>City</span><input type="text" [(ngModel)]="contactForm.city"></label>
+            <button class="apply" (click)="applyContact()" [disabled]="actionBusy">Save details</button>
+          </ng-container>
+
+          <!-- credit -->
+          <ng-container *ngIf="action === 'CREDIT' && client">
+            <label class="f"><span>Product</span>
+              <select [(ngModel)]="creditForm.type">
+                <option value="CONSUMER">Consumer credit — up to 30 000 DT</option>
+                <option value="HOUSING">Housing credit</option>
+                <option value="COMFORT_SAVINGS">Comfort savings loan — up to 5× savings</option>
+              </select>
+            </label>
+            <div class="f-row">
+              <label class="f"><span>Amount (DT)</span><input type="number" [(ngModel)]="creditForm.amount"></label>
+              <label class="f"><span>Months</span><input type="number" [(ngModel)]="creditForm.durationMonths"></label>
+              <label class="f"><span>Monthly income</span><input type="number" [(ngModel)]="creditForm.monthlyIncome"></label>
+            </div>
+            <label class="f"><span>Purpose</span>
+              <input type="text" [(ngModel)]="creditForm.purpose" placeholder="What is the money for?"></label>
+
+            <div class="doc-check">
+              <b>Required paperwork</b>
+              <label *ngFor="let doc of requiredDocuments" class="doc-line">
+                <input type="checkbox" [(ngModel)]="creditForm.documents[doc]"> {{ doc }}
+              </label>
+              <p class="warn" *ngIf="missingDocuments.length > 0">
+                Still missing {{ missingDocuments.length }} document(s) — the file can be opened but the
+                committee will ask for them.
+              </p>
+            </div>
+            <button class="apply" (click)="submitCredit()" [disabled]="actionBusy">Open credit file</button>
+          </ng-container>
+
+          <!-- chequebook -->
+          <ng-container *ngIf="action === 'CHEQUEBOOK' && client">
+            <div class="f-row">
+              <label class="f"><span>Leaves</span>
+                <select [(ngModel)]="bookForm.leafCount">
+                  <option [ngValue]="25">25</option>
+                  <option [ngValue]="50">50</option>
+                  <option [ngValue]="100">100</option>
+                </select>
+              </label>
+              <label class="f"><span>Ceiling per cheque (DT)</span>
+                <input type="number" [(ngModel)]="bookForm.plafond" max="30000"></label>
+            </div>
+            <p class="ops-hint">The 2025 reform caps a cheque at 30 000 DT.</p>
+            <label class="f"><span>Note</span><input type="text" [(ngModel)]="bookForm.note"></label>
+            <button class="apply" (click)="submitChequeBook()" [disabled]="actionBusy">Order chequebook</button>
+          </ng-container>
+
+          <div class="op-ok" *ngIf="actionResult">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5"/></svg>
+            {{ actionResult }}
+            <button class="mini ok" (click)="completeTask()">Mark task done</button>
+          </div>
+
+          <div class="op-history" *ngIf="clientOps.length > 0">
+            <b>Recent changes to this file</b>
+            <div class="hist" *ngFor="let o of clientOps.slice(0, 4)">
+              <span>{{ o.operation }}</span>
+              <i>{{ o.previousValue || '—' }} → {{ o.newValue }}</i>
+              <small>{{ o.performedByName }} · {{ o.performedAt | date:'dd/MM HH:mm' }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-actions">
+        <button class="mini" *ngIf="selected.task.status !== 'IN_PROGRESS'"
+                (click)="move(selected, 'IN_PROGRESS')">Start work</button>
+        <button class="mini ok" *ngIf="selected.task.status !== 'DONE'"
+                (click)="move(selected, 'DONE')">Mark done</button>
+        <button class="mini ko" *ngIf="selected.task.status !== 'PENDING'"
+                (click)="move(selected, 'PENDING')">Send back to To&nbsp;do</button>
+      </div>
+
+      <div class="reassign">
+        <b>Hand over to</b>
+        <div class="people-row">
+          <button *ngFor="let u of colleagues" class="person-chip"
+                  [class.on]="selected.task.assignedToId === u.id" (click)="reassign(selected, u)">
+            {{ u.firstName }} {{ u.lastName }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>

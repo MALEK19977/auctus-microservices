@@ -1,0 +1,440 @@
+<div class="dash">
+  <!-- Parallax ground. These trail the content as the agent scrolls, which is
+       what gives the long history table a sense of depth behind it. -->
+  <div class="bg-wash"></div>
+  <div class="bg-orb o1" [auParallax]="0.16"></div>
+  <div class="bg-orb o2" [auParallax]="0.28"></div>
+  <div class="bg-mesh" [auParallax]="0.08"></div>
+
+  <!-- ------------------------------------------------------------ header -->
+  <header class="au-topbar au-slab">
+    <div class="tb-left">
+      <div class="au-lockup">
+        <span class="au-mark">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5l7 3v6.2c0 4.4-3 8.2-7 9.3-4-1.1-7-4.9-7-9.3V5.5l7-3z"
+                  fill="#C8D9E6"/>
+            <path d="M8.8 12.2l2.4 2.4 4.2-4.8" stroke="#2F4156" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="au-lockup-txt">
+          <strong>AUCTUS</strong>
+          <small>Cheque Validation System</small>
+        </span>
+      </div>
+      <span class="au-portal-chip">AGENT PORTAL</span>
+    </div>
+
+    <nav class="au-nav" aria-label="Primary">
+      <button class="au-navb is-active" (click)="router.navigate(['/agent/dashboard'])">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        </svg><span>Dashboard</span>
+      </button>
+      <button class="au-navb" (click)="goToHistory()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+        </svg><span>History</span>
+      </button>
+      <button class="au-navb" (click)="goToClients()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        </svg><span>Clients</span>
+      </button>
+      <button class="au-navb" (click)="goToSchedule()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg><span>Schedule</span>
+      </button>
+      <button class="au-navb" (click)="goToConversations()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg><span>Messages</span>
+      </button>
+      <button class="au-navb" (click)="goToArchive()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>
+        </svg><span>Archive</span>
+      </button>
+    </nav>
+
+    <div class="tb-right">
+      <button class="au-whoami" (click)="goToProfile()">
+        <span class="au-avatar">{{ getInitials() }}</span>
+        <span class="au-who-txt">
+          <strong>{{ userName }}</strong>
+          <small>Bank Agent</small>
+        </span>
+      </button>
+      <button class="au-logout" (click)="logout()">
+        <span>Logout</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ------------------------------------------------------- bento stats -->
+  <section class="bento au-stagger" aria-label="Validation statistics">
+
+    <article class="tile tile-lg" auTilt>
+      <span class="au-sheen" aria-hidden="true"></span>
+      <div class="au-lift-s tile-body">
+        <span class="tile-ico ok" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4L12 14.01l-3-3"/>
+          </svg>
+        </span>
+        <div class="tile-num">{{ totalCheques }}</div>
+        <div class="tile-lab">Validated cheques</div>
+        <div class="tile-foot">
+          <span class="trend"
+                [class.up]="totalTrendPositive && totalTrend !== '0%'"
+                [class.down]="!totalTrendPositive && totalTrend !== '0%'">{{ totalTrend }}</span>
+          <span class="tile-note">{{ acceptanceRate }}% acceptance</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Clicking through opens the work queue: cheques and requests handed to
+         this agent that still need action. -->
+    <article class="tile clickable" auTilt (click)="goToPendingWork()"
+             tabindex="0" role="button"
+             (keydown.enter)="goToPendingWork()" (keydown.space)="goToPendingWork()"
+             title="Open the tasks still waiting on you">
+      <span class="au-sheen" aria-hidden="true"></span>
+      <div class="au-lift-s tile-body">
+        <span class="tile-ico warn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+          </svg>
+        </span>
+        <div class="tile-num">{{ pendingTotal }}</div>
+        <div class="tile-lab">Pending</div>
+        <div class="tile-foot">
+          <span class="go">Open queue
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+    </article>
+
+    <article class="tile" auTilt>
+      <span class="au-sheen" aria-hidden="true"></span>
+      <div class="au-lift-s tile-body">
+        <span class="tile-ico bad" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>
+          </svg>
+        </span>
+        <div class="tile-num">{{ rejectedCheques }}</div>
+        <div class="tile-lab">Rejected</div>
+        <div class="tile-foot">
+          <span class="trend"
+                [class.down]="rejectedTrendNegative"
+                [class.up]="!rejectedTrendNegative && rejectedTrend !== '0%'">{{ rejectedTrend }}</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- The isometric mix chart. Flips on hover to give the raw counts, so the
+         picture and the numbers share one tile instead of competing for space. -->
+    <article class="tile au-flip mix" aria-label="Validation mix">
+      <div class="au-flip-inner">
+        <div class="au-flip-face mix-face">
+          <div class="mix-head">
+            <span>Validation mix</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 20v-6M6 20v-10M18 20V4"/>
+            </svg>
+          </div>
+          <div class="iso-plot" aria-hidden="true">
+            <div class="iso-stage">
+              <div class="iso-bar" *ngFor="let b of chartBars" [class]="'k-' + b.kind">
+                <div class="iso-col" [style.height.%]="b.pct">
+                  <span class="iso-top"></span><span class="iso-side"></span>
+                </div>
+              </div>
+            </div>
+            <div class="iso-floor"></div>
+          </div>
+          <div class="mix-hint">Hover for counts</div>
+        </div>
+
+        <div class="au-flip-back mix-back">
+          <div class="mix-head"><span>Breakdown</span></div>
+          <ul class="mix-list">
+            <li *ngFor="let b of chartBars">
+              <span class="dot" [class]="'k-' + b.kind" aria-hidden="true"></span>
+              <span class="mix-lab">{{ b.label }}</span>
+              <span class="mix-val">{{ b.value }}</span>
+            </li>
+          </ul>
+          <div class="mix-rate">
+            <span>Acceptance</span><strong>{{ acceptanceRate }}%</strong>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ------------------------------------------------------ work surface -->
+  <section class="work">
+
+    <!-- upload -->
+    <div class="panel au-card">
+      <header class="au-panel-head">
+        <span class="au-panel-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
+          </svg>
+        </span>
+        <div>
+          <h3>New cheque</h3>
+          <p>Upload a cheque image for validation</p>
+        </div>
+      </header>
+
+      <div class="dropzone" (click)="fileInput.click()" [class.is-over]="isDragover"
+           (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+        <input type="file" #fileInput hidden accept="image/*" (change)="onFileSelected($event)">
+        <div *ngIf="!selectedImage" class="dz-empty">
+          <span class="dz-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.8"/>
+              <path d="M21 15l-5-5-6 6-3-3-4 4"/>
+            </svg>
+          </span>
+          <p>Click or drag an image</p>
+          <small>PNG, JPG, JPEG · max 5 MB</small>
+        </div>
+        <div *ngIf="selectedImage && !validationStarted" class="dz-preview">
+          <img [src]="selectedImagePreview" alt="Selected cheque preview">
+          <button class="dz-remove" (click)="removeImage($event)" aria-label="Remove image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="au-btn au-btn-primary go-btn" (click)="startValidation()"
+              [disabled]="!selectedImage || validationStarted">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/>
+        </svg>
+        <span>{{ validationStarted ? 'Validating…' : 'Validate cheque' }}</span>
+      </button>
+    </div>
+
+    <!-- process -->
+    <div class="panel au-card">
+      <header class="au-panel-head">
+        <span class="au-panel-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </span>
+        <div>
+          <h3>Validation process</h3>
+          <p>Automatic cheque verification</p>
+        </div>
+      </header>
+
+      <ol class="steps">
+        <li class="step" [class.done]="step1Completed" [class.busy]="step1Active" [class.bad]="step1Error">
+          <span class="s-dot">
+            <span *ngIf="!step1Completed">1</span>
+            <svg *ngIf="step1Completed && !step1Error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+            <svg *ngIf="step1Error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </span>
+          <div class="s-body">
+            <div class="s-title">Image type verification</div>
+            <div class="s-desc" [class.bad]="step1Error">
+              <span *ngIf="step1Active && !step1Completed">Analysing…</span>
+              <span *ngIf="step1Completed && !step1Error">Cheque detected successfully</span>
+              <span *ngIf="step1Error">{{ step1ErrorMessage }}</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step" [class.done]="step2Completed" [class.busy]="step2Active" [class.bad]="step2Error">
+          <span class="s-dot">
+            <span *ngIf="!step2Completed">2</span>
+            <svg *ngIf="step2Completed && !step2Error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+            <svg *ngIf="step2Error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </span>
+          <div class="s-body">
+            <div class="s-title">QR code reading</div>
+            <div class="s-desc" [class.bad]="step2Error">
+              <span *ngIf="step2Active && !step2Completed">Decoding…</span>
+              <span *ngIf="step2Completed && !step2Error">QR code extracted successfully</span>
+              <span *ngIf="step2Error">{{ step2ErrorMessage }}</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="step last" [class.done]="step3Completed" [class.busy]="step3Active" [class.bad]="step3Error">
+          <span class="s-dot">
+            <span *ngIf="!step3Completed">3</span>
+            <svg *ngIf="step3Completed && !step3Error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+            <svg *ngIf="step3Error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </span>
+          <div class="s-body">
+            <div class="s-title">Signature verification</div>
+            <div class="s-desc" [class.bad]="step3Error">
+              <span *ngIf="step3Active && !step3Completed">Validating…</span>
+              <span *ngIf="step3Completed && !step3Error">Signature authenticated</span>
+              <span *ngIf="step3Error">{{ step3ErrorMessage }}</span>
+            </div>
+          </div>
+        </li>
+      </ol>
+
+      <div class="verdict" *ngIf="validationCompleted"
+           [class.good]="finalResult === 'success'" [class.bad]="finalResult === 'error'"
+           role="status">
+        <span class="v-ico" aria-hidden="true">
+          <svg *ngIf="finalResult === 'success'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4L12 14.01l-3-3"/>
+          </svg>
+          <svg *ngIf="finalResult === 'error'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>
+          </svg>
+        </span>
+        <div class="v-title">{{ finalResult === 'success' ? 'Cheque authenticated' : 'Validation failed' }}</div>
+        <div class="v-msg">{{ finalResult === 'success' ? 'All verifications completed successfully.' : finalErrorMessage }}</div>
+        <button class="au-btn au-btn-ghost" (click)="resetValidation()">Analyse new cheque</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- QR report -->
+  <section class="report au-card" *ngIf="qrData && validationCompleted && finalResult === 'success'">
+    <header class="rep-head">
+      <div class="rep-title">
+        <span class="rep-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/>
+          </svg>
+        </span>
+        <div>
+          <h3>Validation report</h3>
+          <p>Information extracted from the QR code</p>
+        </div>
+      </div>
+      <span class="au-badge au-badge-good">AUTHENTICATED</span>
+    </header>
+
+    <div class="rep-grid">
+      <div class="rep-field">
+        <span class="f-lab">Cheque number</span>
+        <span class="f-val big mono">{{ qrData.chequeNumber || 'N/A' }}</span>
+      </div>
+      <div class="rep-field">
+        <span class="f-lab">Account holder</span>
+        <span class="f-val big">{{ qrData.titulaire || 'N/A' }}</span>
+      </div>
+      <div class="rep-field">
+        <span class="f-lab">Maximum amount</span>
+        <span class="f-val amount">{{ qrData.maxAmount || '0' }} <em>DT</em></span>
+      </div>
+      <div class="rep-field">
+        <span class="f-lab">Issuer RIB</span>
+        <span class="f-val mono">{{ formatRib(qrData.ribTitulaire) }}</span>
+      </div>
+      <div class="rep-field">
+        <span class="f-lab">Expiry date</span>
+        <span class="f-val">{{ qrData.expiryDate || 'N/A' }}</span>
+      </div>
+      <div class="rep-field">
+        <span class="f-lab">Beneficiary RIB</span>
+        <span class="f-val mono">{{ formatRib(qrData.receiverRib) }}</span>
+      </div>
+    </div>
+
+    <div class="scores">
+      <div class="score">
+        <span class="sc-lab">Signature match</span>
+        <span class="sc-val">{{ qrData.signatureScore || 95 }}%</span>
+        <span class="au-meter"><span [style.width.%]="qrData.signatureScore || 95"></span></span>
+      </div>
+      <div class="score">
+        <span class="sc-lab">Confidence score</span>
+        <span class="sc-val">{{ qrData.confidenceScore || 90 }}%</span>
+        <span class="au-meter"><span [style.width.%]="qrData.confidenceScore || 90"></span></span>
+      </div>
+      <div class="score">
+        <span class="sc-lab">Processing time</span>
+        <span class="sc-val">{{ qrData.processingTime || 0 }}s</span>
+        <span class="au-meter"><span [style.width.%]="getProcessingTimeWidth(qrData.processingTime || 1.5)"></span></span>
+      </div>
+    </div>
+
+    <footer class="rep-foot">
+      <span class="stamp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+        </svg>
+        Validated on {{ scanDate | date:'dd/MM/yyyy \'at\' HH:mm' }}
+      </span>
+      <span class="ref mono">REF-{{ qrData.chequeNumber }}-{{ scanDate | date:'yyyyMMddHHmmss' }}</span>
+    </footer>
+  </section>
+
+  <!-- ---------------------------------------------------------- history -->
+  <section class="recent au-card">
+    <header class="rec-head">
+      <div class="rec-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>
+        </svg>
+        <h3>Recent validations</h3>
+      </div>
+      <button class="rec-link" (click)="viewAllHistory()">
+        View all
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="rec-scroll">
+      <table class="au-table">
+        <thead>
+          <tr>
+            <th>Date</th><th>Time</th><th>Cheque number</th>
+            <th>Account holder</th><th>Amount</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cheque of recentCheques | slice:0:5">
+            <td>{{ cheque.validationDate || cheque.date }}</td>
+            <td class="muted">{{ cheque.validationTime || cheque.time }}</td>
+            <td class="mono">{{ cheque.chequeNumber }}</td>
+            <td class="strong">{{ cheque.titulaire }}</td>
+            <td class="amount">{{ formatAmount(cheque.amount) }}</td>
+            <td>
+              <span class="au-badge"
+                    [class.au-badge-good]="cheque.status === 'ACCEPTED'"
+                    [class.au-badge-warn]="cheque.status === 'REVIEW'"
+                    [class.au-badge-bad]="cheque.status === 'REJECTED'">
+                {{ statusLabel(cheque.status) }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="recentCheques.length === 0">
+            <td colspan="6" class="empty">No validations yet</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

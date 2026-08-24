@@ -1,0 +1,20 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: service-registry
+  security:
+    user:
+      # Credentials the other services authenticate with. Override both in any
+      # environment that is not a developer laptop.
+      name: ${EUREKA_USER:eureka}
+      password: ${EUREKA_PASSWORD:eureka123}
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    wait-time-in-ms-when-sync-empty: 0
+    enable-self-preservation: false

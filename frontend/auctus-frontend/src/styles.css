@@ -1,0 +1,629 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+/* ============================================================================
+   AUCTUS design system
+   ----------------------------------------------------------------------------
+   Every colour, shadow, radius and easing the platform uses is declared once,
+   here. Component stylesheets consume these tokens and must not hardcode a hex
+   value - that is what lets the whole product be re-skinned from one file, and
+   it is what keeps each component's CSS under the 10 kB budget that
+   angular.json enforces on `anyComponentStyle`.
+
+   Depth is built from layered shadow + an inner highlight + a small lift on
+   hover. That is what makes a surface look moulded rather than drawn, and it
+   costs nothing at runtime. True 3D (the login hero) is the one place a WebGL
+   context is worth its weight, and it is lazy-loaded on that route alone.
+   ========================================================================== */
+
+:root {
+  /* ---- brand ------------------------------------------------------------
+     Four colours carry the identity. Navy is the foundation, sky is the only
+     accent, beige is the human touch, white is the page.
+
+         navy   #2F4156     sky   #C8D9E6
+         beige  #F5EFEB     white #FFFFFF
+
+     The ramps below are tints and shades of those four - not new hues. They
+     exist because a gradient, a hover state and a disabled state cannot all be
+     the same value, not because the palette grew. */
+
+  --navy-900: #1B2836;   /* deepest - gradient ends, scrim, deep shadow */
+  --navy-800: #24334A;
+  --navy-700: #2F4156;   /* ← THE brand navy. Primary surface + primary ink */
+  --navy-600: #3D5470;
+  --navy-500: #4E6A8A;
+  --navy-400: #6B87A6;   /* muted ink on light ground */
+  --navy-300: #93A9C0;
+  --navy-200: #BCCAD9;
+
+  --sky-100: #F2F7FA;
+  --sky-200: #DFEAF2;
+  --sky-300: #C8D9E6;    /* ← THE brand sky. Accents, charts, glow, focus */
+  --sky-400: #A9C3D6;
+  --sky-500: #87A8C2;
+
+  --beige-50:  #FCFAF8;
+  --beige-100: #F5EFEB;  /* ← THE brand beige. Cards, inputs, table stripes */
+  --beige-200: #EBE0D8;
+  --beige-300: #DCCDC1;
+
+  --white: #FFFFFF;
+
+  /* ---- semantic state ---------------------------------------------------
+     Deliberately desaturated so they sit inside the palette rather than
+     shouting over it. These three are the ONLY colours outside the brand four,
+     they are reserved for validation outcome, and they are never used as
+     decoration. A banking agent has to tell a rejected cheque from a validated
+     one at a glance; shape and text alone do not carry that fast enough, and
+     colour is the one channel that does. */
+  --ok:      #3F6B52;
+  --ok-ink:  #2A4A38;
+  --ok-bg:   #E3EDE7;
+  --warn:     #9A7B3F;
+  --warn-ink: #6B5426;
+  --warn-bg:  #F4EDE0;
+  --bad:      #A34A42;
+  --bad-ink:  #7A342E;
+  --bad-bg:   #F6E5E3;
+
+  /* ---- ink --------------------------------------------------------------- */
+  --ink:       #2F4156;  /* primary text is the brand navy, per the brief */
+  --ink-strong:#1B2836;
+  --ink-muted: #6B87A6;
+  --ink-faint: #93A9C0;
+  --ink-invert:#FFFFFF;
+
+  /* ---- surfaces ---------------------------------------------------------- */
+  --page-bg:   #F2F7FA;  /* the soft sky-tinted ground behind every page */
+  --surface:   #FFFFFF;  /* primary card */
+  --surface-2: #F5EFEB;  /* beige card / input bed */
+  --surface-3: #F2F7FA;  /* recessed panel */
+  --line:      #E4EBF1;
+  --line-strong: #CFDCE7;
+
+  /* ---- gradients --------------------------------------------------------- */
+  --grad-navy:  linear-gradient(135deg, #3D5470 0%, #2F4156 55%, #1B2836 100%);
+  --grad-sky:   linear-gradient(135deg, #DFEAF2 0%, #C8D9E6 50%, #A9C3D6 100%);
+  --grad-beige: linear-gradient(160deg, #FCFAF8 0%, #F5EFEB 100%);
+  --grad-hero:  linear-gradient(135deg, #2F4156 0%, #3D5470 40%, #87A8C2 100%);
+  --grad-sheen: linear-gradient(115deg, rgba(255,255,255,0.14) 0%, transparent 42%);
+
+  --glass:        rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --scrim:        rgba(27, 40, 54, 0.55);
+
+  /* ---- elevation --------------------------------------------------------
+     One scale, tinted navy so shadows belong to the palette instead of turning
+     grey. The inset top highlight is what reads as "moulded". */
+  --e1: 0 6px 14px -10px rgba(47, 65, 86, 0.26), 0 1px 0 rgba(255,255,255,0.9) inset;
+  --e2: 0 14px 28px -20px rgba(47, 65, 86, 0.30), 0 1px 0 rgba(255,255,255,0.95) inset;
+  --e3: 0 22px 42px -24px rgba(47, 65, 86, 0.34), 0 1px 0 rgba(255,255,255,0.95) inset;
+  --e4: 0 34px 60px -30px rgba(27, 40, 54, 0.42), 0 2px 0 rgba(255,255,255,0.5) inset;
+
+  /* The sky-blue aura the brief asks for on hover. */
+  --glow-sky:   0 18px 38px -18px rgba(135, 168, 194, 0.75);
+  --glow-sky-sm:0 10px 22px -12px rgba(135, 168, 194, 0.65);
+  --ring-sky:   0 0 0 4px rgba(200, 217, 230, 0.62);
+
+  /* ---- geometry & motion ------------------------------------------------
+     300ms is the house transition, per the brief. --fast is for the small
+     things (a press, a colour change) where 300ms would feel sluggish. */
+  --r-sm: 9px;
+  --r-md: 13px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --fast: 0.16s;
+  --base: 0.30s;   /* the house 300ms */
+  --slow: 0.42s;
+}
+
+/* ------------------------------------------------------------------ base -- */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--page-bg);
+  color: var(--ink);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; color: var(--ink-strong); }
+h4, h5, h6 { font-family: 'Inter', sans-serif; color: var(--ink-strong); }
+
+a { color: var(--navy-600); text-decoration: none; }
+a:hover { color: var(--navy-700); }
+
+html, body { max-width: 100%; }
+img, svg, video, canvas { max-width: 100%; height: auto; }
+html { scroll-behavior: smooth; }
+
+/* Icons are authored as inline SVG with no width/height attributes so they can
+   be sized from CSS and inherit their colour from `currentColor`. Without a
+   default they would fall back to the SVG spec's 300x150. Component styles are
+   attribute-scoped by Angular and so always win over this. */
+button > svg, a > svg, label > svg,
+.ico > svg, .doc-ico > svg, .tool > svg, .op > span > svg { width: 16px; height: 16px; flex: none; }
+.empty-icon > svg { width: 28px; height: 28px; }
+
+/* -------------------------------------------------------------- surfaces -- */
+
+/* The default card: white, softly moulded, lifts on hover with a sky aura. */
+.au-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e2);
+  transition: transform var(--base) var(--ease), box-shadow var(--base) var(--ease);
+}
+.au-card:hover { transform: translateY(-3px); box-shadow: var(--e3), var(--glow-sky); }
+
+/* Beige variant - used where a surface should feel warmer than the page. */
+.au-card-beige { background: var(--grad-beige); border-color: var(--beige-200); }
+
+/* Dark slab for page headers, rails and anything that should read as chrome. */
+.au-slab {
+  position: relative;
+  background: var(--grad-navy);
+  color: var(--ink-invert);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e4);
+  overflow: hidden;
+}
+/* The diagonal sheen is what sells the moulded look on a dark surface. */
+.au-slab::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: var(--grad-sheen);
+}
+.au-slab h1, .au-slab h2, .au-slab h3 { color: var(--ink-invert); }
+
+.au-glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* A sky hairline across the top of a tile. */
+.au-topline { position: relative; }
+.au-topline::before {
+  content: '';
+  position: absolute; left: 20px; right: 20px; top: 0; height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--grad-sky);
+}
+
+/* ---------------------------------------------------------- 3D primitives -- */
+
+/* Bento tilt. The [auTilt] directive writes --rx/--ry from the pointer; the
+   CSS just consumes them, so with JS off (or motion reduced) the tile is still
+   a perfectly good card that simply does not tilt. */
+.au-tilt {
+  transform: perspective(900px)
+             rotateX(var(--rx, 0deg))
+             rotateY(var(--ry, 0deg))
+             translateY(var(--ty, 0px));
+  transform-style: preserve-3d;
+  transition: transform var(--base) var(--ease), box-shadow var(--base) var(--ease);
+  will-change: transform;
+}
+.au-tilt.is-live { transition: transform 80ms linear, box-shadow var(--base) var(--ease); }
+.au-tilt:hover { box-shadow: var(--e3), var(--glow-sky); }
+/* Children lifted off the tile face read as genuinely above it. */
+.au-tilt .au-lift   { transform: translateZ(26px); transform-style: preserve-3d; }
+.au-tilt .au-lift-s { transform: translateZ(14px); transform-style: preserve-3d; }
+
+/* Specular highlight that tracks the pointer across a tilting tile. */
+.au-tilt .au-sheen {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.55), transparent 62%);
+  opacity: 0; transition: opacity var(--base) var(--ease);
+}
+.au-tilt:hover .au-sheen { opacity: 1; }
+
+/* Card flip. Put .au-flip-inner > .au-flip-face + .au-flip-back inside. */
+.au-flip { perspective: 1200px; background: none; box-shadow: none; border: 0; }
+.au-flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform var(--slow) var(--ease);
+}
+.au-flip.is-flipped .au-flip-inner,
+.au-flip:hover .au-flip-inner { transform: rotateY(180deg); }
+.au-flip-face, .au-flip-back {
+  position: absolute; inset: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: var(--r-lg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.au-flip-face { background: var(--grad-beige); border: 1px solid var(--beige-200); box-shadow: var(--e2); }
+.au-flip-back { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--e2);
+                transform: rotateY(180deg); }
+
+/* Isometric projection for data viz and iconography. */
+.au-iso { transform: rotateX(55deg) rotateZ(-45deg); transform-style: preserve-3d; }
+.au-iso-soft { transform: perspective(1200px) rotateX(52deg) rotateZ(-42deg) scale(0.92); }
+
+/* Parallax: layers translate from --par, written by the [auParallax] directive. */
+.au-parallax-layer { transform: translate3d(0, var(--par, 0px), 0); will-change: transform; }
+
+/* -------------------------------------------------------------- controls -- */
+
+.au-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 20px;
+  border: none; border-radius: var(--r-md);
+  font-family: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: transform var(--base) var(--ease), box-shadow var(--base) var(--ease),
+              background var(--base) var(--ease), color var(--base) var(--ease);
+}
+.au-btn:active { transform: translateY(1px); }
+.au-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.au-btn-primary {
+  background: var(--grad-navy); color: var(--ink-invert);
+  box-shadow: 0 10px 20px -12px rgba(27, 40, 54, 0.9);
+}
+.au-btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: var(--glow-sky); }
+
+.au-btn-sky {
+  background: var(--sky-300); color: var(--navy-700);
+  box-shadow: var(--glow-sky-sm);
+}
+.au-btn-sky:hover:not(:disabled) { transform: translateY(-3px); background: var(--sky-400); }
+
+.au-btn-ghost {
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+.au-btn-ghost:hover:not(:disabled) {
+  transform: translateY(-3px); background: var(--sky-100);
+  border-color: var(--sky-400); box-shadow: var(--glow-sky-sm);
+}
+
+.au-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-md);
+  font-family: inherit; font-size: 14px;
+  background: var(--surface-2);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--base) var(--ease), box-shadow var(--base) var(--ease),
+              background var(--base) var(--ease);
+}
+.au-input::placeholder { color: var(--ink-faint); }
+.au-input:focus {
+  border-color: var(--sky-400);
+  background: var(--surface);
+  box-shadow: var(--ring-sky);
+}
+
+.au-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+/* Outcome badges. A dot carries the state as well as the colour, so the
+   meaning survives greyscale printing and colour-blind vision. */
+.au-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; flex: none;
+}
+.au-badge-good    { background: var(--ok-bg);   color: var(--ok-ink); }
+.au-badge-bad     { background: var(--bad-bg);  color: var(--bad-ink); }
+.au-badge-warn    { background: var(--warn-bg); color: var(--warn-ink); }
+.au-badge-neutral { background: var(--sky-200); color: var(--navy-700); }
+/* Non-outcome chips (counts, labels) opt out of the dot. */
+.au-chip::before { display: none; }
+
+/* Keyboard users must always see where they are - a sky ring, per the brief. */
+:focus-visible {
+  outline: 3px solid var(--sky-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ----------------------------------------------------------- page chrome --
+   The navy bar, its nav buttons and the identity block are identical on the
+   agent dashboard, the history page, the admin dashboard, the client register,
+   the agenda and the message thread. They live here so those six pages share
+   one implementation - which is both why they look like one product and why
+   none of their stylesheets breaches the per-component budget. */
+
+.au-topbar {
+  position: sticky; top: 12px; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; padding: 13px 20px;
+}
+
+.au-nav { display: flex; gap: 3px; flex: 1; justify-content: center; flex-wrap: wrap; }
+.au-navb {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 13px; border: none; border-radius: var(--r-md);
+  background: transparent; color: rgba(255, 255, 255, 0.72);
+  font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: transform var(--base) var(--ease), background var(--base) var(--ease),
+              color var(--base) var(--ease);
+}
+.au-navb svg { width: 16px; height: 16px; }
+.au-navb:hover { background: rgba(255, 255, 255, 0.1); color: #fff; transform: translateY(-2px); }
+.au-navb.is-active {
+  background: var(--sky-300); color: var(--navy-700); box-shadow: var(--glow-sky-sm);
+}
+
+/* Brand lockup */
+.au-lockup { display: flex; align-items: center; gap: 11px; }
+.au-mark {
+  width: 38px; height: 38px; flex: none;
+  display: grid; place-items: center; border-radius: 11px;
+  background: rgba(200, 217, 230, 0.16); border: 1px solid rgba(200, 217, 230, 0.3);
+}
+.au-mark svg { width: 23px; height: 23px; }
+.au-lockup-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.au-lockup-txt strong { font-size: 16px; font-weight: 800; letter-spacing: .13em; color: #fff; }
+.au-lockup-txt small { font-size: 10px; color: var(--sky-300); letter-spacing: .03em; }
+.au-portal-chip {
+  padding: 4px 10px; border-radius: var(--r-pill);
+  background: var(--sky-300); color: var(--navy-700);
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em; white-space: nowrap;
+}
+
+/* Identity block */
+.au-whoami {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 11px 5px 5px; border: none; border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.09); cursor: pointer; font-family: inherit;
+  transition: transform var(--base) var(--ease), background var(--base) var(--ease);
+}
+.au-whoami:hover { background: rgba(255, 255, 255, 0.16); transform: translateY(-2px); }
+.au-avatar {
+  width: 32px; height: 32px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--sky-300); color: var(--navy-700);
+  font-size: 12px; font-weight: 800;
+}
+.au-who-txt { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+.au-who-txt strong { font-size: 12.5px; color: #fff; font-weight: 600; }
+.au-who-txt small { font-size: 10px; color: var(--sky-300); }
+
+.au-logout {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 14px; border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(200, 217, 230, 0.24);
+  color: #fff; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: transform var(--base) var(--ease), background var(--base) var(--ease),
+              border-color var(--base) var(--ease);
+}
+.au-logout svg { width: 15px; height: 15px; }
+.au-logout:hover { background: var(--bad); border-color: transparent; transform: translateY(-2px); }
+
+/* Back link used at the top of every secondary page. */
+.au-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(200, 217, 230, 0.26);
+  color: #fff; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: transform var(--base) var(--ease), background var(--base) var(--ease);
+}
+.au-back svg { width: 16px; height: 16px; transition: transform var(--base) var(--ease); }
+.au-back:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-2px); }
+.au-back:hover svg { transform: translateX(-3px); }
+
+/* Card header: icon bed + title + subtitle. */
+.au-panel-head { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 18px; }
+.au-panel-ico {
+  width: 42px; height: 42px; flex: none; border-radius: 13px;
+  display: grid; place-items: center;
+  background: var(--sky-200); color: var(--navy-700);
+}
+.au-panel-ico svg { width: 21px; height: 21px; }
+.au-panel-head h3 { font-size: 17px; margin-bottom: 2px; }
+.au-panel-head p { font-size: 12.5px; color: var(--ink-muted); }
+
+/* Pagination - navy and sky, nothing else. */
+.au-pager { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; }
+.au-pager button {
+  min-width: 38px; padding: 9px 13px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: transform var(--base) var(--ease), background var(--base) var(--ease),
+              border-color var(--base) var(--ease), box-shadow var(--base) var(--ease);
+}
+.au-pager button:hover:not(:disabled):not(.is-active) {
+  background: var(--sky-100); border-color: var(--sky-400);
+  transform: translateY(-2px); box-shadow: var(--glow-sky-sm);
+}
+.au-pager button.is-active {
+  background: var(--grad-navy); border-color: transparent; color: #fff;
+  box-shadow: var(--glow-sky-sm);
+}
+.au-pager button:disabled { opacity: .42; cursor: not-allowed; }
+
+/* ---------------------------------------------------------------- tables -- */
+
+.au-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.au-table thead th {
+  background: var(--navy-700); color: var(--ink-invert);
+  padding: 13px 16px; text-align: left;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.au-table thead th:first-child { border-radius: var(--r-md) 0 0 0; }
+.au-table thead th:last-child  { border-radius: 0 var(--r-md) 0 0; }
+.au-table tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+/* The beige stripe the brief asks for. */
+.au-table tbody tr:nth-child(even) { background: var(--beige-100); }
+.au-table tbody tr {
+  transition: background var(--base) var(--ease), box-shadow var(--base) var(--ease);
+}
+.au-table tbody tr:hover {
+  background: var(--sky-100);
+  box-shadow: inset 3px 0 0 var(--sky-400);
+}
+.au-table .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px; }
+
+/* ------------------------------------------------------------ data viz --- */
+
+/* Isometric bar chart.
+   The stage is rotated into an isometric view and each bar draws its own top
+   and right faces as skewed pseudo-elements, so a flat rectangle reads as an
+   extruded solid. No canvas, no charting library, and it re-colours from the
+   same tokens as everything else. */
+.iso-plot { position: relative; flex: 1; display: grid; place-items: center; }
+.iso-stage {
+  display: flex; align-items: flex-end; gap: 16px;
+  height: 74px;
+  transform: rotateX(52deg) rotateZ(-45deg) translateZ(0);
+  transform-style: preserve-3d;
+}
+.iso-bar { width: 17px; height: 100%; display: flex; align-items: flex-end; }
+.iso-col {
+  position: relative; width: 100%; min-height: 8%;
+  background: var(--sky-300);
+  transition: height var(--slow) var(--ease);
+}
+.iso-top {
+  position: absolute; left: 0; right: 0; top: -8px; height: 8px;
+  background: var(--sky-200);
+  transform: skewX(-45deg); transform-origin: bottom left;
+}
+.iso-side {
+  position: absolute; top: -8px; bottom: 0; right: -8px; width: 8px;
+  background: var(--navy-600);
+  transform: skewY(-45deg); transform-origin: top left;
+  opacity: .55;
+}
+/* Series colours: navy is the primary, sky the secondary, beige the tertiary. */
+.k-ok   .iso-col { background: var(--navy-700); }
+.k-ok   .iso-top { background: var(--navy-500); }
+.k-warn .iso-col { background: var(--sky-400); }
+.k-warn .iso-top { background: var(--sky-300); }
+.k-bad  .iso-col { background: var(--beige-300); }
+.k-bad  .iso-top { background: var(--beige-200); }
+
+.iso-floor {
+  position: absolute; left: 50%; top: 50%; width: 140px; height: 140px;
+  transform: translate(-50%, -50%) rotateX(52deg) rotateZ(-45deg);
+  border: 1px dashed rgba(47, 65, 86, 0.16); border-radius: 4px;
+  pointer-events: none; z-index: -1;
+}
+
+/* Progress / score meter. */
+.au-meter {
+  height: 8px; border-radius: var(--r-pill);
+  background: var(--sky-200); overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(47, 65, 86, 0.18);
+}
+.au-meter > span {
+  display: block; height: 100%; border-radius: var(--r-pill);
+  background: var(--grad-navy);
+  transition: width var(--slow) var(--ease);
+}
+
+/* ---------------------------------------------------------------- motion -- */
+
+@keyframes auRise   { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes auFade   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes auFloat  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes auDrift  { 0% { transform: translate(0,0) scale(1); }
+                      33% { transform: translate(6%, -5%) scale(1.08); }
+                      66% { transform: translate(-5%, 5%) scale(0.95); }
+                      100% { transform: translate(0,0) scale(1); } }
+@keyframes auSpin   { to { transform: rotate(360deg); } }
+@keyframes auPulse  { 0%,100% { box-shadow: 0 0 0 0 rgba(200,217,230,0.7); }
+                      70% { box-shadow: 0 0 0 12px rgba(200,217,230,0); } }
+@keyframes auShimmer{ 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+
+.au-enter { animation: auRise var(--slow) var(--ease) both; }
+.au-stagger > * { animation: auRise var(--slow) var(--ease) both; }
+.au-stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.au-stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.au-stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.au-stagger > *:nth-child(4) { animation-delay: 0.16s; }
+.au-stagger > *:nth-child(5) { animation-delay: 0.20s; }
+.au-stagger > *:nth-child(6) { animation-delay: 0.24s; }
+
+/* Nobody should be made unwell by the interface. Motion is decoration here -
+   every animated element is fully legible standing still. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .au-card:hover, .au-tilt, .au-tilt:hover { transform: none !important; }
+  .au-flip:hover .au-flip-inner { transform: none; }
+  .au-parallax-layer { transform: none !important; }
+}
+
+/* ------------------------------------------------------------ responsive -- */
+/* These live here rather than in each component so a page cannot be forgotten.
+   They target the three things that actually break a banking UI on a phone:
+   wide tables, multi-column grids, and side panels pinned to a width. */
+
+@media (max-width: 1024px) {
+  .kpi-row, .detail-grid, .cards, .two-col, .bento
+    { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important; }
+}
+
+@media (max-width: 760px) {
+  table { display: block; width: 100%; overflow-x: auto;
+          -webkit-overflow-scrolling: touch; white-space: nowrap; }
+
+  .kpi-row, .detail-grid, .board, .two-col, .cards, .metrics-grid,
+  .form-grid, .ops-grid, .detail-rows, .f-row, .time-row, .bento
+    { grid-template-columns: 1fr !important; }
+
+  .drawer-inner, .drawer-inner.wide, .drawer-inner.full
+    { width: 100% !important; max-width: 100% !important; }
+
+  .admin-shell, .board-shell, .clients-container, .profile-shell,
+  .msg-shell, .sched-shell { padding: 13px !important; }
+
+  .admin-header, .board-header, .clients-header, .history-header
+    { flex-direction: column; align-items: flex-start !important; }
+
+  .chat-shell { grid-template-columns: 1fr !important; height: auto !important; }
+  .rail { max-height: 44vh; }
+  .thread { min-height: 56vh; }
+
+  /* Touch targets stay thumb-sized. */
+  .au-btn, .mini-btn, .mini, .ghost, .op { min-height: 42px; }
+
+  /* Tilt is a pointer affordance; on touch it just gets in the way. */
+  .au-tilt { transform: none !important; }
+}
+
+@media (max-width: 420px) {
+  .kpi-value, .stat-premium-value { font-size: 24px !important; }
+  h1 { font-size: 21px !important; }
+  h2 { font-size: 17px !important; }
+}
+
+/* ------------------------------------------------------------- scrollbar -- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--sky-100); }
+::-webkit-scrollbar-thumb { background: var(--navy-300); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--navy-500); }

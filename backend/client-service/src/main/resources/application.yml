@@ -1,0 +1,34 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: CLIENT-SERVICE
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 20MB
+  datasource:
+    url: ${CHEQUE_DB_URL:jdbc:postgresql://localhost:5432/cheque_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:eureka123@localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true
+
+clients:
+  # Paths are relative to the repository by default so the project runs on any
+  # machine. Point AUCTUS_DATA_DIR elsewhere to use a dataset stored outside it.
+  master-file: ${AUCTUS_DATA_DIR:../../cheque_generator}/output/clients_master.csv
+  signatures-folder: ${AUCTUS_DATA_DIR:../../cheque_generator}/signatures/extract
+  # Re-reads the file at startup: refreshes balances, never reassigns identities.
+  import-on-startup: ${CLIENTS_IMPORT_ON_STARTUP:true}
