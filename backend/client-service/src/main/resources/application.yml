@@ -29,6 +29,9 @@ clients:
   # Paths are relative to the repository by default so the project runs on any
   # machine. Point AUCTUS_DATA_DIR elsewhere to use a dataset stored outside it.
   master-file: ${AUCTUS_DATA_DIR:../../cheque_generator}/output/clients_master.csv
-  signatures-folder: ${AUCTUS_DATA_DIR:../../cheque_generator}/signatures/extract
+  # Specimens live beside the services, not in the generator folder: that folder
+  # is a separate desktop tool and is not always present. Resolved from the
+  # service working directory (backend/client-service).
+  signatures-folder: ${AUCTUS_SIGNATURES_DIR:../signatures/extract}
   # Re-reads the file at startup: refreshes balances, never reassigns identities.
   import-on-startup: ${CLIENTS_IMPORT_ON_STARTUP:true}

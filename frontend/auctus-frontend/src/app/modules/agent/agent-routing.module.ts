@@ -10,13 +10,14 @@ import { ScheduleComponent } from '../../shared/schedule/schedule.component';
 const routes: Routes = [
   { path: '', component: DashboardComponent },
   { path: 'dashboard', component: DashboardComponent },
-  { path: 'history', component: HistoryComponent },
+  { path: 'archive', component: HistoryComponent },
   { path: 'clients', component: ClientsComponent },
   { path: 'profile', component: ProfileComponent },
   { path: 'schedule', component: ScheduleComponent },
   { path: 'conversations', component: MessagesComponent },
-  // The archive view is the same record as the history, just entered elsewhere.
-  { path: 'archive', redirectTo: 'history', pathMatch: 'full' }
+  // The old 'history' path is kept so existing links and bookmarks still land
+  // on the archive, which is now the single record of validated cheques.
+  { path: 'history', redirectTo: 'archive', pathMatch: 'full' }
 ];
 
 @NgModule({

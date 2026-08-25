@@ -352,3 +352,30 @@
   .board-shell { padding: 14px; }
   .detail-rows { grid-template-columns: 1fr; }
 }
+
+/* ---------------------------------------------------------------- icons -- */
+/* An inline <svg> carrying only a viewBox has no intrinsic size, so it grows to
+   fill whatever holds it. Every icon here is sized explicitly; the base rule
+   below is the safety net for any icon added later. */
+svg {
+  width: 16px;
+  height: 16px;
+  flex: none;           /* never stretch inside a flex row */
+  vertical-align: -2px; /* sit on the text baseline */
+}
+
+.back-btn svg { width: 18px; height: 18px; }
+.close-x svg,
+.size-btn svg { width: 15px; height: 15px; }
+
+/* The client line and the attachment count read as text with a small mark. */
+.card-client svg { width: 13px; height: 13px; opacity: 0.75; }
+.card-badges svg { width: 12px; height: 12px; }
+
+.card-client {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;         /* lets a long client name ellipsise instead of pushing out */
+}
+.card-badges span { display: inline-flex; align-items: center; gap: 4px; }

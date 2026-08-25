@@ -461,7 +461,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
-  goToHistory(): void { this.router.navigate(['/agent/history']); }
+  // History and Archive were the same page under two names; Archive is the one
+  // that remains, and this still points there for any caller left over.
+  goToHistory(): void { this.router.navigate(['/agent/archive']); }
   goToClients(): void { this.router.navigate(['/agent/clients']); }
 
   /**

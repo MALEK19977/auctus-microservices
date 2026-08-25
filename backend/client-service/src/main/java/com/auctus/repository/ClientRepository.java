@@ -26,6 +26,10 @@ public interface ClientRepository extends JpaRepository<Client, String> {
      */
     @Query("SELECT c FROM Client c WHERE c.rib = :term OR c.accountNumber = :term "
             + "OR c.cin = :term OR LOWER(c.fullName) LIKE LOWER(CONCAT('%', :term, '%')) "
+            // Prefix match so a partly typed RIB or account number still finds the
+            // account - an agent reading a cheque often keys only the first digits.
+            + "OR c.rib LIKE CONCAT(:term, '%') "
+            + "OR c.accountNumber LIKE CONCAT(:term, '%') "
             + "ORDER BY c.fullName")
     List<Client> search(@Param("term") String term);
 }
