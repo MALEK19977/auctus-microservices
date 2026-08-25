@@ -51,4 +51,19 @@ public class Cheque {
     
     private LocalDateTime createdAt;
     private LocalDateTime validatedAt;
+
+    /**
+     * File name of the cheque image as stored on disk. An administrator reviewing
+     * a rejection has to see the document the agent saw, so the upload is kept
+     * rather than discarded once the services have read it.
+     */
+    private String imageName;
+
+    /**
+     * Set when an administrator has looked at this cheque. A rejection stays
+     * rejected; this only records that somebody has seen it, which is what the
+     * oversight badge counts down.
+     */
+    private LocalDateTime reviewedAt;
+    private String reviewedBy;
 }

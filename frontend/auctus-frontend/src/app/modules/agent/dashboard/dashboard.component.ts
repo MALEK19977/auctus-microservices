@@ -116,7 +116,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: stats => {
         this.totalCheques = stats.total || 0;
-        this.pendingCheques = stats.review || 0;
+        // Pending is work waiting on this agent - the tasks handed to them - not
+        // cheques. Every validated cheque used to land here and bump the count,
+        // which was never something the agent had to act on.
+        this.pendingCheques = this.openTasks;
         this.rejectedCheques = stats.rejected || 0;
         this.localTotalCheques = this.totalCheques;
         this.localRejectedCheques = this.rejectedCheques;
@@ -291,9 +294,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.step3Active = false;
             this.step3Completed = true;
             
-            // REVIEW means every blocking rule passed but something needs a human
-            // eye (typically the handwritten amount). It is not a rejection.
-            if (response.status === 'ACCEPTED' || response.status === 'REVIEW') {
+            if (response.status === 'ACCEPTED') {
               this.validationSuccess();
             } else {
               this.step1Error = true;
@@ -467,13 +468,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   goToClients(): void { this.router.navigate(['/agent/clients']); }
 
   /**
-   * The database stores ACCEPTED / REVIEW / REJECTED. The table used to compare
-   * against 'valid', which no record ever matched, so every row read "Rejected".
+   * The database stores ACCEPTED or REJECTED. The table used to compare against
+   * 'valid', which no record ever matched, so every row read "Rejected".
    */
   statusLabel(status: string): string {
     switch ((status || '').toUpperCase()) {
       case 'ACCEPTED': return 'Validated';
-      case 'REVIEW': return 'Needs review';
       case 'REJECTED': return 'Rejected';
       default: return status || '—';
     }

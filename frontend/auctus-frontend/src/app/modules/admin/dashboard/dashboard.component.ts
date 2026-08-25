@@ -7,7 +7,6 @@ interface Bucket {
   date: string;
   label: string;
   accepted: number;
-  review: number;
   rejected: number;
   total: number;
 }
@@ -50,7 +49,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Reserved for state; never reused as a generic series colour.
   readonly COLOR = {
     accepted: '#10B981',
-    review: '#F59E0B',
     rejected: '#EF4444',
     brand: '#C6A43F'
   };
@@ -74,7 +72,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   lastUpdated: Date | null = null;
 
   stats: any = {
-    total: 0, accepted: 0, review: 0, rejected: 0,
+    total: 0, accepted: 0, rejected: 0,
     today: 0, averageProcessingTime: 0, averageSignatureScore: 0,
     totalPlafondAccepted: 0
   };
@@ -209,7 +207,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const x = this.padL + index * step + (step - barW) / 2;
       const parts = [
         { status: 'Validated', count: bucket.accepted, fill: this.COLOR.accepted },
-        { status: 'Needs review', count: bucket.review, fill: this.COLOR.review },
         { status: 'Rejected', count: bucket.rejected, fill: this.COLOR.rejected }
       ].filter(p => p.count > 0);
 
@@ -308,7 +305,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch ((status || '').toUpperCase()) {
       case 'ACCEPTED': return 'badge-success';
       case 'REJECTED': return 'badge-error';
-      case 'REVIEW': return 'badge-warning';
       default: return 'badge-neutral';
     }
   }

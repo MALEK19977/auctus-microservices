@@ -255,7 +255,6 @@ export class ClientsComponent implements OnInit {
     switch ((status || '').toUpperCase()) {
       case 'ACCEPTED': return 'badge-success';
       case 'REJECTED': return 'badge-error';
-      case 'REVIEW': return 'badge-warning';
       default: return 'badge-neutral';
     }
   }

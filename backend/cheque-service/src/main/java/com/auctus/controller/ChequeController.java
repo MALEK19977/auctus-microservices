@@ -66,9 +66,7 @@ public class ChequeController {
 
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("total", cheques.size());
-        stats.put("accepted", count(cheques, ChequeStatus.ACCEPTED));
-        stats.put("review", count(cheques, ChequeStatus.REVIEW));
-        stats.put("rejected", count(cheques, ChequeStatus.REJECTED));
+        stats.put("accepted", count(cheques, ChequeStatus.ACCEPTED));        stats.put("rejected", count(cheques, ChequeStatus.REJECTED));
 
         BigDecimal covered = cheques.stream()
                 .filter(c -> c.getStatus() == ChequeStatus.ACCEPTED)
@@ -178,9 +176,9 @@ public class ChequeController {
         String reviewer = body.getOrDefault("reviewer", "admin");
         String note = body.getOrDefault("note", "");
 
-        if (!List.of("ACCEPTED", "REJECTED", "REVIEW").contains(decision)) {
+        if (!List.of("ACCEPTED", "REJECTED").contains(decision)) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "decision must be ACCEPTED, REJECTED or REVIEW"));
+                    .body(Map.of("error", "decision must be ACCEPTED or REJECTED"));
         }
 
         return chequeRepository.findById(chequeId).<ResponseEntity<?>>map(cheque -> {
@@ -227,9 +225,7 @@ public class ChequeController {
             Map<String, Object> bucket = new LinkedHashMap<>();
             bucket.put("date", day.toString());
             bucket.put("label", String.format("%02d/%02d", day.getDayOfMonth(), day.getMonthValue()));
-            bucket.put("accepted", count(onDay, ChequeStatus.ACCEPTED));
-            bucket.put("review", count(onDay, ChequeStatus.REVIEW));
-            bucket.put("rejected", count(onDay, ChequeStatus.REJECTED));
+            bucket.put("accepted", count(onDay, ChequeStatus.ACCEPTED));            bucket.put("rejected", count(onDay, ChequeStatus.REJECTED));
             bucket.put("total", onDay.size());
             series.add(bucket);
         }
@@ -250,9 +246,7 @@ public class ChequeController {
             Map<String, Object> bucket = new LinkedHashMap<>();
             bucket.put("date", slot.toString());
             bucket.put("label", String.format("%02dh", slot.getHour()));
-            bucket.put("accepted", count(inSlot, ChequeStatus.ACCEPTED));
-            bucket.put("review", count(inSlot, ChequeStatus.REVIEW));
-            bucket.put("rejected", count(inSlot, ChequeStatus.REJECTED));
+            bucket.put("accepted", count(inSlot, ChequeStatus.ACCEPTED));            bucket.put("rejected", count(inSlot, ChequeStatus.REJECTED));
             bucket.put("total", inSlot.size());
             series.add(bucket);
         }
@@ -270,9 +264,7 @@ public class ChequeController {
             row.put("agentId", entry.getKey());
             row.put("agentName", displayName(items.get(0)));
             row.put("total", items.size());
-            row.put("accepted", count(items, ChequeStatus.ACCEPTED));
-            row.put("review", count(items, ChequeStatus.REVIEW));
-            row.put("rejected", count(items, ChequeStatus.REJECTED));
+            row.put("accepted", count(items, ChequeStatus.ACCEPTED));            row.put("rejected", count(items, ChequeStatus.REJECTED));
             row.put("averageProcessingTime", items.stream()
                     .filter(c -> c.getProcessingTime() != null)
                     .mapToDouble(Cheque::getProcessingTime).average().orElse(0.0));

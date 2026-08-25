@@ -419,7 +419,6 @@
             <td>
               <span class="au-badge"
                     [class.au-badge-good]="cheque.status === 'ACCEPTED'"
-                    [class.au-badge-warn]="cheque.status === 'REVIEW'"
                     [class.au-badge-bad]="cheque.status === 'REJECTED'">
                 {{ statusLabel(cheque.status) }}
               </span>

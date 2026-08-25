@@ -259,7 +259,7 @@ export class HistoryComponent implements OnInit {
   closeModal(): void { this.showModal = false; this.selectedCheque = null; }
 
   /* -------------------------------------------------------------- status --
-   * The service persists ACCEPTED / REVIEW / REJECTED. This page was written
+   * The service persists ACCEPTED or REJECTED. This page was written
    * against 'valid' / 'invalid', which no record has ever matched, so the two
    * counters read zero and every row - accepted ones included - was labelled
    * "Rejected". These helpers normalise the value once and everything else
@@ -269,20 +269,17 @@ export class HistoryComponent implements OnInit {
 
   isAccepted(status: string): boolean { return this.norm(status) === 'ACCEPTED'; }
   isRejected(status: string): boolean { return this.norm(status) === 'REJECTED'; }
-  isReview(status: string): boolean { return this.norm(status) === 'REVIEW'; }
 
   /** Maps onto the shared badge classes in styles.css. */
   getStatusClass(status: string): string {
     if (this.isAccepted(status)) { return 'au-badge-good'; }
     if (this.isRejected(status)) { return 'au-badge-bad'; }
-    if (this.isReview(status)) { return 'au-badge-warn'; }
     return 'au-badge-neutral';
   }
 
   getStatusText(status: string): string {
     if (this.isAccepted(status)) { return 'Validated'; }
     if (this.isRejected(status)) { return 'Rejected'; }
-    if (this.isReview(status)) { return 'Needs review'; }
     return status || '—';
   }
 

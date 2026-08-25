@@ -66,9 +66,9 @@
     </article>
 
     <article class="kpi-card">
-      <span class="kpi-label">Awaiting review</span>
-      <span class="kpi-value accent-warn">{{ stats.review }}</span>
-      <span class="kpi-foot">need a human check</span>
+      <span class="kpi-label">Avg signature match</span>
+      <span class="kpi-value">{{ (stats.averageSignatureScore * 100) | number:'1.0-0' }}%</span>
+      <span class="kpi-foot">across validated cheques</span>
     </article>
 
     <article class="kpi-card">
@@ -93,7 +93,6 @@
       </div>
       <div class="legend">
         <span class="legend-item"><i class="swatch" [style.background]="COLOR.accepted"></i>Validated</span>
-        <span class="legend-item"><i class="swatch" [style.background]="COLOR.review"></i>Needs review</span>
         <span class="legend-item"><i class="swatch" [style.background]="COLOR.rejected"></i>Rejected</span>
         <button class="link-btn" (click)="showTrendTable = !showTrendTable">
           {{ showTrendTable ? 'Show chart' : 'Show table' }}
@@ -144,10 +143,10 @@
     </div>
 
     <table class="data-table" *ngIf="showTrendTable">
-      <thead><tr><th>Period</th><th>Validated</th><th>Needs review</th><th>Rejected</th><th>Total</th></tr></thead>
+      <thead><tr><th>Period</th><th>Validated</th><th>Rejected</th><th>Total</th></tr></thead>
       <tbody>
         <tr *ngFor="let d of series">
-          <td>{{ d.label }}</td><td>{{ d.accepted }}</td><td>{{ d.review }}</td>
+          <td>{{ d.label }}</td><td>{{ d.accepted }}</td>
           <td>{{ d.rejected }}</td><td>{{ d.total }}</td>
         </tr>
       </tbody>

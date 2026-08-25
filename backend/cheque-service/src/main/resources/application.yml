@@ -38,3 +38,9 @@ services:
 
 signature:
   threshold: ${SIGNATURE_THRESHOLD:0.72}
+
+cheque:
+  # The uploaded cheque image is kept so an administrator reviewing a rejection
+  # can see the document the agent saw. Real customer documents: excluded from
+  # the repository by .gitignore.
+  image-dir: ${AUCTUS_CHEQUE_IMAGES:../../uploads/cheques}

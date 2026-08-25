@@ -18,7 +18,7 @@ export class ProfileComponent implements OnInit {
   userRole = '';
 
   account: any = null;
-  stats: any = { total: 0, accepted: 0, review: 0, rejected: 0, averageProcessingTime: 0, averageSignatureScore: 0 };
+  stats: any = { total: 0, accepted: 0, rejected: 0, averageProcessingTime: 0, averageSignatureScore: 0 };
   loading = true;
 
   constructor(private http: HttpClient, public router: Router) {}

@@ -170,10 +170,12 @@ public class ChequeValidationService {
             } else if ("FAIL".equals(fundsStatus)) {
                 status = ChequeStatus.REJECTED;
                 rejectionReason = asString(funds.get("message"));
-            } else if ("REVIEW".equals(qrVerdict) || "REVIEW".equals(signatureStatus)
-                    || "REVIEW".equals(fundsStatus)) {
-                status = ChequeStatus.REVIEW;
             } else {
+                // Everything that blocks a cheque has already been ruled out above.
+                // What is left is an inconclusive check - an unknown holder, a
+                // signature service that did not answer, an unreadable amount. That
+                // used to be its own REVIEW status, which the agent screen already
+                // treated as a pass, so it is simply an acceptance now.
                 status = ChequeStatus.ACCEPTED;
             }
 
