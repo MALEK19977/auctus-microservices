@@ -20,6 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -59,6 +62,58 @@ public class ChequeValidationService {
 
     @Value("${services.client.url:http://localhost:8086}")
     private String clientServiceUrl;
+
+    @Value("${cheque.image-dir:../../uploads/cheques}")
+    private String imageDir;
+
+    /**
+     * Keeps the uploaded cheque so an administrator reviewing the verdict can see
+     * the document the agent saw. Returns the stored name, or null if it could
+     * not be written - a validation must never fail because of its own archive.
+     */
+    private String storeImage(byte[] bytes, String originalName) {
+        try {
+            Path dir = Paths.get(imageDir).toAbsolutePath().normalize();
+            Files.createDirectories(dir);
+
+            String ext = "png";
+            if (originalName != null) {
+                int dot = originalName.lastIndexOf('.');
+                if (dot > -1 && dot < originalName.length() - 1) {
+                    String candidate = originalName.substring(dot + 1).toLowerCase();
+                    if (candidate.matches("png|jpg|jpeg|webp")) {
+                        ext = candidate;
+                    }
+                }
+            }
+
+            String stored = UUID.randomUUID() + "." + ext;
+            Files.write(dir.resolve(stored), bytes);
+            return stored;
+        } catch (Exception e) {
+            log.warn("Could not archive the cheque image: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** Reads back an archived cheque image. */
+    public java.util.Optional<byte[]> readImage(Cheque cheque) {
+        if (cheque.getImageName() == null || cheque.getImageName().isBlank()) {
+            return java.util.Optional.empty();
+        }
+        try {
+            Path dir = Paths.get(imageDir).toAbsolutePath().normalize();
+            Path file = dir.resolve(cheque.getImageName()).normalize();
+            // The name comes from the database, but a traversal would read any file.
+            if (!file.startsWith(dir) || !Files.isRegularFile(file)) {
+                return java.util.Optional.empty();
+            }
+            return java.util.Optional.of(Files.readAllBytes(file));
+        } catch (Exception e) {
+            log.warn("Could not read archived cheque image: {}", e.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
 
     @Transactional
     public ChequeValidationResponse validateCheque(MultipartFile image, String agentId) {
@@ -214,6 +269,7 @@ public class ChequeValidationService {
             cheque.setStatus(status);
             cheque.setRejectionReason(rejectionReason);
             cheque.setSignatureScore(signatureScore);
+            cheque.setImageName(storeImage(bytes, fileName));
             cheque.setValidatedBy(agentId);
             cheque.setValidatedByName(agentName);
             cheque.setValidatedAt(LocalDateTime.now());

@@ -377,83 +377,22 @@
     <p class="empty-line" *ngIf="workload.length === 0">No agent activity in this range.</p>
   </section>
 
-  <!-- Validation oversight -->
-  <section class="panel">
-    <div class="panel-head">
-      <div>
-        <h2>Validation oversight</h2>
-        <p>Click a row to read the full reason, then confirm or overturn the agent's decision</p>
-      </div>
-    </div>
-
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Cheque no.</th><th>Account holder</th><th>Ceiling</th>
-          <th>Signature</th><th>Agent</th><th>Status</th><th>Decision</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngFor="let c of recent">
-          <tr class="clickable" (click)="toggleDetail(c)">
-            <td class="mono">{{ c.chequeNumber || '—' }}</td>
-            <td>{{ c.issuerName || '—' }}</td>
-            <td>{{ c.plafond ? money(c.plafond) + ' DT' : '—' }}</td>
-            <td>{{ c.signatureScore != null ? (c.signatureScore * 100 | number:'1.0-0') + '%' : '—' }}</td>
-            <td>{{ agentName(c) }}</td>
-            <td><span class="badge" [ngClass]="statusClass(c.status)">{{ c.status }}</span></td>
-            <td class="actions" (click)="$event.stopPropagation()">
-              <button class="mini-btn ok" (click)="decide(c, 'ACCEPTED')" [disabled]="c.status === 'ACCEPTED'">Validate</button>
-              <button class="mini-btn ko" (click)="decide(c, 'REJECTED')" [disabled]="c.status === 'REJECTED'">Reject</button>
-            </td>
-          </tr>
-          <tr *ngIf="expanded === c.id" class="detail-row">
-            <td colspan="7">
-              <div class="detail-grid">
-                <div><span>Reason</span><b>{{ c.rejectionReason || 'No issue recorded — all checks passed.' }}</b></div>
-                <div><span>Holder RIB</span><b class="mono">{{ c.issuerRib || '—' }}</b></div>
-                <div><span>Beneficiary RIB</span><b class="mono">{{ c.beneficiaryRib || '—' }}</b></div>
-                <div><span>Expiry</span><b>{{ c.expiryDate || '—' }}</b></div>
-                <div><span>Amount read</span><b>{{ c.amountWritten ? money(c.amountWritten) + ' DT' : 'not readable' }}</b></div>
-                <div><span>Processed</span><b>{{ c.validatedAt | date:'dd/MM/yyyy HH:mm:ss' }}</b></div>
-              </div>
-            </td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-    <p class="empty-line" *ngIf="recent.length === 0">No validations recorded yet.</p>
-  </section>
-
-  <!-- Agent management -->
-  <section class="panel">
-    <div class="panel-head">
-      <div>
-        <h2>Agent accounts</h2>
-        <p>Suspend or reinstate an account — accounts are never deleted</p>
-      </div>
-    </div>
-
-    <table class="data-table">
-      <thead>
-        <tr><th>Email</th><th>Name</th><th>Role</th><th>Last sign-in</th><th>Status</th><th></th></tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let u of users">
-          <td class="mono">{{ u.email }}</td>
-          <td>{{ u.firstName }} {{ u.lastName }}</td>
-          <td><span class="badge badge-neutral">{{ u.role }}</span></td>
-          <td>{{ u.lastLogin ? (u.lastLogin | date:'dd/MM/yyyy HH:mm') : 'never' }}</td>
-          <td><span class="badge" [ngClass]="u.status === 'ACTIVE' ? 'badge-success' : 'badge-error'">{{ u.status }}</span></td>
-          <td class="actions">
-            <button class="mini-btn" (click)="toggleUser(u)">
-              {{ u.status === 'ACTIVE' ? 'Suspend' : 'Reinstate' }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="empty-line" *ngIf="users.length === 0">Authentication service unreachable (port 8081).</p>
+  <!-- Both of these used to be sections here. On their own pages they can be
+       searched and paged, and this console stays about deciding. -->
+  <section class="jump-row">
+    <button class="jump" (click)="router.navigate(['/admin/archive'])">
+      <span class="jump-title">Validation archive</span>
+      <span class="jump-sub">
+        Every decision, searchable — with the reason, the client and the cheque image
+      </span>
+      <span class="jump-badge" *ngIf="unreviewedRejections > 0">
+        {{ unreviewedRejections }} unread
+      </span>
+    </button>
+    <button class="jump" (click)="router.navigate(['/admin/agents'])">
+      <span class="jump-title">Agent accounts</span>
+      <span class="jump-sub">Create, suspend and change roles</span>
+    </button>
   </section>
 
 </div>

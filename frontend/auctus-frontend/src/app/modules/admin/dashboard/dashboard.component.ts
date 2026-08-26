@@ -127,6 +127,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Badge on the Messages button, refreshed with the rest of the console. */
   unreadMessages = 0;
 
+  /** Rejections no administrator has opened yet - badge on the archive link. */
+  unreviewedRejections = 0;
+
   constructor(private http: HttpClient, public router: Router) {}
 
   ngOnInit(): void {
@@ -263,6 +266,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.http.get<any>(`${this.AUTH_API}/users`).subscribe({
       next: data => { this.users = data.users || []; },
       error: () => { this.users = []; }
+    });
+
+    this.http.get<any>(`${this.CHEQUE_API}/unreviewed-count`).subscribe({
+      next: data => { this.unreviewedRejections = data.unreviewed || 0; },
+      error: () => { this.unreviewedRejections = 0; }
     });
 
     if (this.userId) {

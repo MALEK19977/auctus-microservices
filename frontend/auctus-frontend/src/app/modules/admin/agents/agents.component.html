@@ -1,0 +1,140 @@
+<div class="ag-shell">
+
+  <header class="ag-header">
+    <div class="head-left">
+      <button class="back-btn" (click)="back()" title="Back to the console">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1>Agent accounts</h1>
+        <p>{{ activeCount }} active of {{ users.length }} accounts</p>
+      </div>
+    </div>
+    <button class="primary-btn" (click)="creating = !creating; notice = ''">
+      {{ creating ? 'Cancel' : '+ New agent' }}
+    </button>
+  </header>
+
+  <div *ngIf="error" class="alert alert-error" (click)="error = ''">{{ error }}</div>
+  <div *ngIf="notice" class="alert alert-ok" (click)="notice = ''">{{ notice }}</div>
+
+  <!-- Create -->
+  <section class="create-card" *ngIf="creating">
+    <h2>Create an account</h2>
+    <p class="hint">
+      The person signs in with the email and password set here. Give them the
+      password directly — it is stored hashed and cannot be read back.
+    </p>
+
+    <div class="form-grid">
+      <label>
+        <span>First name</span>
+        <input type="text" [(ngModel)]="form.firstName" placeholder="Sami">
+      </label>
+      <label>
+        <span>Last name</span>
+        <input type="text" [(ngModel)]="form.lastName" placeholder="Ben Salah">
+      </label>
+      <label>
+        <span>Email</span>
+        <input type="email" [(ngModel)]="form.email" placeholder="sami@auctus.com">
+      </label>
+      <label>
+        <span>Role</span>
+        <select [(ngModel)]="form.role">
+          <option value="AGENT">Agent — validates cheques</option>
+          <option value="ADMIN">Administrator — full console</option>
+        </select>
+      </label>
+      <label class="pw">
+        <span>Password <small>at least 10 characters</small></span>
+        <div class="pw-row">
+          <input type="text" [(ngModel)]="form.password" placeholder="Auctus@1234!">
+          <button type="button" class="ghost-btn" (click)="suggestPassword()">Suggest</button>
+        </div>
+      </label>
+    </div>
+
+    <p class="need" *ngIf="formError">{{ formError }}</p>
+
+    <div class="form-actions">
+      <button class="ghost-btn" (click)="creating = false">Cancel</button>
+      <button class="primary-btn" (click)="create()" [disabled]="saving || !!formError">
+        {{ saving ? 'Creating…' : 'Create account' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section class="filters">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" [(ngModel)]="search" placeholder="Name, email or role…">
+    </div>
+    <select [(ngModel)]="roleFilter">
+      <option value="ALL">Any role</option>
+      <option value="AGENT">Agents</option>
+      <option value="ADMIN">Administrators</option>
+    </select>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="showInactive">
+      Include suspended
+    </label>
+  </section>
+
+  <!-- Accounts -->
+  <section class="cards">
+    <article class="acct" *ngFor="let u of filtered" [class.off]="u.status !== 'ACTIVE'">
+      <div class="acct-top">
+        <div class="avatar">{{ initials(u) }}</div>
+        <div class="who">
+          <b>{{ u.firstName }} {{ u.lastName }}</b>
+          <span class="mail">{{ u.email }}</span>
+        </div>
+        <span class="role-pill" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
+      </div>
+
+      <div class="acct-stats">
+        <div class="stat">
+          <span class="s-val">{{ work(u) ? work(u).total : 0 }}</span>
+          <span class="s-lab">cheques</span>
+        </div>
+        <div class="stat">
+          <span class="s-val ok">{{ work(u) ? work(u).accepted : 0 }}</span>
+          <span class="s-lab">validated</span>
+        </div>
+        <div class="stat">
+          <span class="s-val bad">{{ work(u) ? work(u).rejected : 0 }}</span>
+          <span class="s-lab">rejected</span>
+        </div>
+        <div class="stat">
+          <span class="s-val">{{ work(u) ? (work(u).averageProcessingTime | number:'1.0-1') : '—' }}<small *ngIf="work(u)">s</small></span>
+          <span class="s-lab">avg time</span>
+        </div>
+      </div>
+
+      <div class="acct-foot">
+        <span class="last">
+          Last sign-in:
+          {{ u.lastLogin ? (u.lastLogin | date:'dd/MM/yyyy HH:mm') : 'never' }}
+        </span>
+        <span class="state" [class.on]="u.status === 'ACTIVE'">{{ u.status }}</span>
+      </div>
+
+      <div class="acct-actions">
+        <select [ngModel]="u.role" (ngModelChange)="changeRole(u, $event)">
+          <option value="AGENT">Agent</option>
+          <option value="ADMIN">Administrator</option>
+        </select>
+        <button class="ghost-btn" (click)="toggle(u)">
+          {{ u.status === 'ACTIVE' ? 'Suspend' : 'Reinstate' }}
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <p class="empty-line" *ngIf="!loading && filtered.length === 0">No account matches.</p>
+  <p class="empty-line" *ngIf="loading">Loading accounts…</p>
+</div>

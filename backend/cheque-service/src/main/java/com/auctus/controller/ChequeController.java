@@ -194,6 +194,52 @@ public class ChequeController {
         }).orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Chèque introuvable")));
     }
 
+    /**
+     * Records that an administrator has read this cheque.
+     *
+     * Distinct from a decision: the verdict is unchanged, only the fact that a
+     * human has now seen it. That is what the "not yet read" count counts down.
+     */
+    @PostMapping("/{chequeId}/acknowledge")
+    public ResponseEntity<?> acknowledge(@PathVariable String chequeId,
+                                         @RequestBody(required = false) Map<String, String> body) {
+        String reviewer = body == null ? "admin" : body.getOrDefault("reviewer", "admin");
+        return chequeRepository.findById(chequeId).<ResponseEntity<?>>map(cheque -> {
+            if (cheque.getReviewedAt() == null) {
+                cheque.setReviewedAt(LocalDateTime.now());
+                cheque.setReviewedBy(reviewer);
+                chequeRepository.save(cheque);
+            }
+            return ResponseEntity.ok(Map.of(
+                    "id", cheque.getId(),
+                    "reviewedAt", String.valueOf(cheque.getReviewedAt()),
+                    "reviewedBy", String.valueOf(cheque.getReviewedBy())));
+        }).orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Chèque introuvable")));
+    }
+
+    /** How many rejections nobody has opened yet - the console badge. */
+    @GetMapping("/unreviewed-count")
+    public ResponseEntity<Map<String, Object>> unreviewedCount() {
+        long count = chequeRepository.findAll().stream()
+                .filter(c -> c.getStatus() == ChequeStatus.REJECTED && c.getReviewedAt() == null)
+                .count();
+        return ResponseEntity.ok(Map.of("unreviewed", count));
+    }
+
+    /** The cheque image as it was validated, when one was kept. */
+    @GetMapping("/{chequeId}/image")
+    public ResponseEntity<byte[]> chequeImage(@PathVariable String chequeId) {
+        return chequeRepository.findById(chequeId)
+                .map(chequeValidationService::readImage)
+                .filter(java.util.Optional::isPresent)
+                .map(java.util.Optional::get)
+                .map(bytes -> ResponseEntity.ok()
+                        .header("Content-Type", "image/png")
+                        .header("Cache-Control", "private, max-age=3600")
+                        .body(bytes))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/test")
     public ResponseEntity<String> test() {
         return ResponseEntity.ok("Cheque Service is running!");
