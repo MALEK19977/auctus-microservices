@@ -11,11 +11,9 @@
         <p>Every cheque the branch has decided, and the reasoning behind each one</p>
       </div>
     </div>
-    <div class="head-right">
-      <span class="unreviewed" *ngIf="unreviewedCount > 0">
-        {{ unreviewedCount }} rejection{{ unreviewedCount > 1 ? 's' : '' }} not yet read
-      </span>
-    </div>
+    <span class="unreviewed" *ngIf="unreviewedCount > 0">
+      {{ unreviewedCount }} rejection{{ unreviewedCount > 1 ? 's' : '' }} not yet read
+    </span>
   </header>
 
   <div *ngIf="loadError" class="alert alert-error">{{ loadError }}</div>
@@ -51,121 +49,130 @@
 
   <p class="result-line">
     {{ filtered.length }} of {{ rows.length }} cheques
-    <span *ngIf="filtered.length > pageSize">
-      · page {{ pageIndex + 1 }} of {{ totalPages }}
-    </span>
+    <span *ngIf="filtered.length > pageSize">· page {{ pageIndex + 1 }} of {{ totalPages }}</span>
   </p>
 
-  <!-- Table -->
-  <section class="panel">
-    <div class="table-scroll">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Cheque</th><th>Account holder</th><th>Ceiling</th>
-            <th>Signature</th><th>Agent</th><th>When</th><th>Verdict</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <ng-container *ngFor="let row of page">
-            <tr class="row" [class.open]="expanded === row.id"
-                [class.unread]="row.status === 'REJECTED' && !row.reviewedAt"
-                (click)="toggleDetail(row)">
-              <td class="mono">{{ row.chequeNumber || '—' }}</td>
-              <td>{{ row.issuerName || '—' }}</td>
-              <td>{{ money(row.plafond || row.amount) }} DT</td>
-              <td>
-                <span *ngIf="row.signatureScore != null">
-                  {{ (row.signatureScore * 100) | number:'1.0-0' }}%
-                </span>
-                <span class="dash" *ngIf="row.signatureScore == null">—</span>
-              </td>
-              <td>{{ row.validatedByName || row.validatedBy || '—' }}</td>
-              <td class="mono">{{ row.validatedAt | date:'dd/MM HH:mm' }}</td>
-              <td><span class="badge" [ngClass]="statusClass(row.status)">{{ row.status }}</span></td>
-              <td class="chev">{{ expanded === row.id ? '▾' : '▸' }}</td>
-            </tr>
+  <!-- One card per cheque. Cards rather than a table: eight columns never fit
+       comfortably, and every value here wants its own label to be readable. -->
+  <section class="list">
+    <article class="cheque" *ngFor="let row of page"
+             [class.open]="expanded === row.id"
+             [class.rejected]="row.status === 'REJECTED'"
+             [class.unread]="row.status === 'REJECTED' && !row.reviewedAt">
 
-            <!-- Full reasoning, the client file, and the cheque as it arrived -->
-            <tr class="detail" *ngIf="expanded === row.id">
-              <td colspan="8">
-                <div class="detail-grid">
+      <button class="summary" (click)="toggleDetail(row)">
+        <span class="verdict-mark" [class.ko]="row.status === 'REJECTED'">
+          {{ row.status === 'ACCEPTED' ? '✓' : '✕' }}
+        </span>
 
-                  <div class="d-block">
-                    <h4>Why this verdict</h4>
-                    <p class="reason" *ngIf="row.rejectionReason">{{ row.rejectionReason }}</p>
-                    <p class="reason ok" *ngIf="!row.rejectionReason">
-                      Passed every check: the QR agreed with the printed cheque, the
-                      signature matched, and the account could honour it.
-                    </p>
-                    <dl>
-                      <dt>Issuer RIB</dt><dd class="mono">{{ rib(row.issuerRib) }}</dd>
-                      <dt>Beneficiary RIB</dt><dd class="mono">{{ rib(row.beneficiaryRib) }}</dd>
-                      <dt>Expiry</dt><dd>{{ row.expiryDate || '—' }}</dd>
-                      <dt>Handwritten amount</dt>
-                      <dd>{{ row.amountWritten != null ? money(row.amountWritten) + ' DT' : 'not read' }}</dd>
-                      <dt>Processing time</dt>
-                      <dd>{{ row.processingTime | number:'1.1-1' }}s</dd>
-                    </dl>
-                  </div>
+        <span class="s-main">
+          <b class="s-holder">{{ row.issuerName || 'Unknown holder' }}</b>
+          <span class="s-sub">
+            Cheque <i class="mono">{{ row.chequeNumber || '—' }}</i>
+            · <i class="mono">{{ rib(row.issuerRib) }}</i>
+          </span>
+        </span>
 
-                  <div class="d-block">
-                    <h4>Account holder</h4>
-                    <p class="muted" *ngIf="clientLoading">Loading the client file…</p>
-                    <p class="muted" *ngIf="!clientLoading && !client">
-                      No client file matches this RIB.
-                    </p>
-                    <dl *ngIf="client">
-                      <dt>Name</dt><dd>{{ client.fullName }}</dd>
-                      <dt>CIN</dt><dd class="mono">{{ client.cin }}</dd>
-                      <dt>City</dt><dd>{{ client.city }}</dd>
-                      <dt>Account</dt><dd>{{ client.accountType }}</dd>
-                      <dt>Balance</dt><dd>{{ money(client.balance) }} DT</dd>
-                      <dt>Agency</dt><dd>{{ client.agencyName }}</dd>
-                    </dl>
-                    <button class="link-btn" *ngIf="client"
-                            (click)="$event.stopPropagation(); router.navigate(['/admin/clients'], { queryParams: { q: client.rib } })">
-                      Open the full client file
-                    </button>
-                  </div>
+        <span class="s-field">
+          <em>Ceiling</em>
+          <b>{{ money(row.plafond || row.amount) }} DT</b>
+        </span>
 
-                  <div class="d-block">
-                    <h4>The cheque</h4>
-                    <img *ngIf="imageUrl(row)" [src]="imageUrl(row)" alt="Cheque as validated"
-                         class="cheque-img">
-                    <p class="muted" *ngIf="!imageUrl(row)">
-                      No image was kept for this validation. Cheques validated from
-                      now on are stored and shown here.
-                    </p>
-                  </div>
-                </div>
+        <span class="s-field">
+          <em>Signature</em>
+          <b *ngIf="row.signatureScore != null"
+             [class.weak]="row.signatureScore < 0.75">
+            {{ (row.signatureScore * 100) | number:'1.0-0' }}%
+          </b>
+          <b class="none" *ngIf="row.signatureScore == null">not scored</b>
+        </span>
 
-                <div class="decide-row" (click)="$event.stopPropagation()">
-                  <span class="decide-label">Confirm or overturn the platform's verdict:</span>
-                  <button class="ok-btn" [disabled]="row.status === 'ACCEPTED'"
-                          (click)="decide(row, 'ACCEPTED')">Validate</button>
-                  <button class="ko-btn" [disabled]="row.status === 'REJECTED'"
-                          (click)="decide(row, 'REJECTED')">Reject</button>
-                </div>
-              </td>
-            </tr>
-          </ng-container>
-        </tbody>
-      </table>
-    </div>
+        <span class="s-field">
+          <em>Agent</em>
+          <b>{{ row.validatedByName || row.validatedBy || '—' }}</b>
+        </span>
 
-    <p class="empty-line" *ngIf="!loading && filtered.length === 0">
-      No cheque matches these filters.
-    </p>
-    <p class="empty-line" *ngIf="loading">Loading the archive…</p>
+        <span class="s-field">
+          <em>When</em>
+          <b class="mono">{{ row.validatedAt | date:'dd/MM HH:mm' }}</b>
+        </span>
 
-    <div class="pager" *ngIf="totalPages > 1">
-      <button (click)="goPage(-1)" [disabled]="pageIndex === 0">Previous</button>
-      <span>Page {{ pageIndex + 1 }} of {{ totalPages }}</span>
-      <button (click)="goPage(1)" [disabled]="pageIndex + 1 >= totalPages">Next</button>
-      <select [(ngModel)]="pageSize" (change)="pageIndex = 0; paginate()">
-        <option *ngFor="let s of pageSizes" [value]="s">{{ s }} per page</option>
-      </select>
-    </div>
+        <span class="s-tail">
+          <span class="dot-unread" *ngIf="row.status === 'REJECTED' && !row.reviewedAt"
+                title="Not read yet"></span>
+          <span class="chev">{{ expanded === row.id ? '▾' : '▸' }}</span>
+        </span>
+      </button>
+
+      <!-- Full reasoning, the client file, and the cheque as it arrived -->
+      <div class="detail" *ngIf="expanded === row.id">
+        <div class="detail-grid">
+
+          <div class="d-block">
+            <h4>Why this verdict</h4>
+            <p class="reason" *ngIf="row.rejectionReason">{{ row.rejectionReason }}</p>
+            <p class="reason ok" *ngIf="!row.rejectionReason">
+              Passed every check: the QR agreed with the printed cheque, the
+              signature matched, and the account could honour it.
+            </p>
+            <dl>
+              <dt>Issuer RIB</dt><dd class="mono">{{ rib(row.issuerRib) }}</dd>
+              <dt>Beneficiary RIB</dt><dd class="mono">{{ rib(row.beneficiaryRib) }}</dd>
+              <dt>Expiry</dt><dd>{{ row.expiryDate || '—' }}</dd>
+              <dt>Handwritten amount</dt>
+              <dd>{{ row.amountWritten != null ? money(row.amountWritten) + ' DT' : 'not read' }}</dd>
+              <dt>Processing time</dt><dd>{{ row.processingTime | number:'1.1-1' }}s</dd>
+            </dl>
+          </div>
+
+          <div class="d-block">
+            <h4>Account holder</h4>
+            <p class="muted" *ngIf="clientLoading">Loading the client file…</p>
+            <p class="muted" *ngIf="!clientLoading && !client">No client file matches this RIB.</p>
+            <dl *ngIf="client">
+              <dt>Name</dt><dd>{{ client.fullName }}</dd>
+              <dt>CIN</dt><dd class="mono">{{ client.cin }}</dd>
+              <dt>City</dt><dd>{{ client.city }}</dd>
+              <dt>Account</dt><dd>{{ client.accountType }}</dd>
+              <dt>Balance</dt><dd>{{ money(client.balance) }} DT</dd>
+              <dt>Agency</dt><dd>{{ client.agencyName }}</dd>
+            </dl>
+            <button class="link-btn" *ngIf="client"
+                    (click)="router.navigate(['/admin/clients'], { queryParams: { q: client.rib } })">
+              Open the full client file
+            </button>
+          </div>
+
+          <div class="d-block">
+            <h4>The cheque</h4>
+            <img *ngIf="imageUrl(row)" [src]="imageUrl(row)" alt="Cheque as validated" class="cheque-img">
+            <p class="muted" *ngIf="!imageUrl(row)">
+              No image was kept for this validation. Cheques validated from now on
+              are stored and shown here.
+            </p>
+          </div>
+        </div>
+
+        <div class="decide-row">
+          <span class="decide-label">Confirm or overturn the platform's verdict:</span>
+          <button class="ok-btn" [disabled]="row.status === 'ACCEPTED'"
+                  (click)="decide(row, 'ACCEPTED')">Validate</button>
+          <button class="ko-btn" [disabled]="row.status === 'REJECTED'"
+                  (click)="decide(row, 'REJECTED')">Reject</button>
+        </div>
+      </div>
+    </article>
   </section>
+
+  <p class="empty-line" *ngIf="!loading && filtered.length === 0">No cheque matches these filters.</p>
+  <p class="empty-line" *ngIf="loading">Loading the archive…</p>
+
+  <div class="pager" *ngIf="totalPages > 1">
+    <button (click)="goPage(-1)" [disabled]="pageIndex === 0">Previous</button>
+    <span>Page {{ pageIndex + 1 }} of {{ totalPages }}</span>
+    <button (click)="goPage(1)" [disabled]="pageIndex + 1 >= totalPages">Next</button>
+    <select [(ngModel)]="pageSize" (change)="pageIndex = 0; paginate()">
+      <option *ngFor="let s of pageSizes" [value]="s">{{ s }} per page</option>
+    </select>
+  </div>
 </div>

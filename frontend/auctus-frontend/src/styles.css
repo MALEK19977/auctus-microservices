@@ -589,8 +589,14 @@ button > svg, a > svg, label > svg,
 }
 
 @media (max-width: 760px) {
-  table { display: block; width: 100%; overflow-x: auto;
-          -webkit-overflow-scrolling: touch; white-space: nowrap; }
+  /* Tables are NOT switched to display:block here. That destroys the table
+     formatting context, and the browser rebuilds it with anonymous boxes -
+     which stacks cells into one column and leaves the headers pointing at
+     nothing. A wide table scrolls inside its container instead. */
+  .table-wrap, .table-scroll, .scroll-x, .rec-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 
   .kpi-row, .detail-grid, .board, .two-col, .cards, .metrics-grid,
   .form-grid, .ops-grid, .detail-rows, .f-row, .time-row, .bento
