@@ -84,6 +84,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   users: any[] = [];
   recent: any[] = [];
+
+  /** Every cheque in the current range, so a chart hover can name the rows. */
+  private detailRows: any[] = [];
+
+  /**
+   * The segment the cursor is over, already resolved to what should be shown.
+   * Positioned in viewport coordinates because the SVG scales with its viewBox,
+   * so pixel offsets inside it do not map to the page.
+   */
+  hoverSeg: {
+    x: number;
+    y: number;
+    title: string;
+    status: string;
+    count: number;
+    rows: any[];
+    more: number;
+  } | null = null;
   expanded: string | null = null;
 
   showTrendTable = false;
@@ -136,6 +154,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadAll();
   }
 
+  /**
+   * Fills the tooltip for one coloured segment: which cheques it is made of,
+   * who validated each one and for which client.
+   */
+  showSegment(col: Column, seg: { status: string; count: number }, event: MouseEvent): void {
+    const rows = this.rowsFor(col.key, seg.status);
+    this.hoverSeg = {
+      x: event.clientX,
+      y: event.clientY,
+      title: col.label,
+      status: seg.status,
+      count: seg.count,
+      // Six is what fits before the card starts scrolling; the rest are counted.
+      rows: rows.slice(0, 6),
+      more: Math.max(0, rows.length - 6)
+    };
+  }
+
+  moveSegment(event: MouseEvent): void {
+    if (this.hoverSeg) {
+      this.hoverSeg.x = event.clientX;
+      this.hoverSeg.y = event.clientY;
+    }
+  }
+
+  hideSegment(): void {
+    this.hoverSeg = null;
+  }
+
+  /**
+   * The cheques inside one bucket with one verdict.
+   *
+   * Bucket keys come from the backend: a plain date for daily columns, a
+   * date-and-hour for hourly ones. Comparing the leading characters of the
+   * timestamp matches the way those buckets were formed in the first place.
+   */
+  private rowsFor(bucketKey: string, status: string): any[] {
+    const wanted = status === 'Validated' ? 'ACCEPTED' : 'REJECTED';
+    const byHour = this.stats?.bucketUnit === 'hour';
+    const width = byHour ? 13 : 10;
+    const key = bucketKey.slice(0, width);
+
+    return this.detailRows.filter(row => {
+      const at = row.validatedAt || row.createdAt;
+      return at && at.slice(0, width) === key && row.status === wanted;
+    });
+  }
+
+  /** Time of day only - the tooltip already says which day it is. */
+  segTime(row: any): string {
+    const at = row.validatedAt || row.createdAt;
+    return at ? new Date(at).toLocaleTimeString('fr-TN', { hour: '2-digit', minute: '2-digit' }) : '—';
+  }
+
+  segRib(rib: string): string {
+    if (!rib || rib.length !== 20) { return rib || '—'; }
+    return `${rib.slice(0, 2)} ${rib.slice(2, 5)} ${rib.slice(5, 18)} ${rib.slice(18)}`;
+  }
+
   loadAll(silent = false): void {
     // A background poll must not flash the loading banner over live figures.
     this.loading = !silent;
@@ -165,11 +242,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     });
 
-    const historyParams: any = { size: '12' };
+    // Pulled wide rather than 12 deep: the same rows feed the recent list and the
+    // chart tooltips, so hovering a column costs nothing over the network.
+    const historyParams: any = { size: '500' };
     if (this.selectedAgent !== 'ALL') { historyParams.agentId = this.selectedAgent; }
     this.http.get<any>(`${this.CHEQUE_API}/history`, { params: historyParams }).subscribe({
-      next: data => { this.recent = data.content || []; },
-      error: () => { this.recent = []; }
+      next: data => {
+        this.detailRows = data.content || [];
+        this.recent = this.detailRows.slice(0, 12);
+      },
+      error: () => { this.detailRows = []; this.recent = []; }
     });
 
     this.http.get<any>(`${this.AUTH_API}/users`).subscribe({

@@ -118,9 +118,13 @@
           <rect [attr.x]="col.x - 4" [attr.y]="padT" [attr.width]="barWidth + 8"
                 [attr.height]="chartH - padB - padT" fill="transparent"></rect>
           <rect *ngFor="let seg of col.segments"
+                class="seg"
                 [attr.x]="col.x" [attr.y]="seg.y"
                 [attr.width]="barWidth" [attr.height]="seg.height"
-                [attr.fill]="seg.fill" rx="3"></rect>
+                [attr.fill]="seg.fill" rx="3"
+                (mouseenter)="showSegment(col, seg, $event)"
+                (mousemove)="moveSegment($event)"
+                (mouseleave)="hideSegment()"></rect>
           <text *ngIf="col.total > 0" [attr.x]="col.x + barWidth / 2"
                 [attr.y]="(col.segments.length ? col.segments[col.segments.length-1].y : padT) - 5"
                 text-anchor="middle" class="value-label">{{ col.total }}</text>
@@ -132,6 +136,41 @@
         <text [attr.x]="padL + (chartW - padL) / 2" [attr.y]="chartH - 6"
               text-anchor="middle" class="axis-title">{{ axisLabel }}</text>
       </svg>
+
+      <!-- Segment detail. Fixed to the viewport: the SVG scales with its
+           viewBox, so coordinates inside it do not map to page pixels. -->
+      <div class="seg-tip" *ngIf="hoverSeg"
+           [style.left.px]="hoverSeg.x + 16" [style.top.px]="hoverSeg.y + 16">
+        <div class="tip-head">
+          <span class="tip-dot"
+                [style.background]="hoverSeg.status === 'Validated' ? COLOR.accepted : COLOR.rejected"></span>
+          <b>{{ hoverSeg.count }} {{ hoverSeg.status | lowercase }}</b>
+          <span class="tip-when">{{ hoverSeg.title }}</span>
+        </div>
+
+        <table class="tip-table" *ngIf="hoverSeg.rows.length > 0">
+          <tr *ngFor="let r of hoverSeg.rows">
+            <td class="tip-time">{{ segTime(r) }}</td>
+            <td class="tip-who">
+              <b>{{ r.issuerName || '—' }}</b>
+              <small>{{ segRib(r.issuerRib) }}</small>
+            </td>
+            <td class="tip-agent">
+              {{ r.validatedByName || r.validatedBy || '—' }}
+              <small *ngIf="r.signatureScore != null">
+                signature {{ (r.signatureScore * 100) | number:'1.0-0' }}%
+              </small>
+            </td>
+          </tr>
+        </table>
+
+        <p class="tip-more" *ngIf="hoverSeg.more > 0">
+          + {{ hoverSeg.more }} more — open the archive for the full list
+        </p>
+        <p class="tip-none" *ngIf="hoverSeg.rows.length === 0">
+          Detail not loaded for this period.
+        </p>
+      </div>
 
       <div class="tooltip" *ngIf="hovered">
         <strong>{{ hovered.label }}</strong>

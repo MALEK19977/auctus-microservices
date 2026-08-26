@@ -284,3 +284,55 @@
   .admin-shell { padding: 14px; }
   .hbar-label { width: 100px; }
 }
+
+/* ------------------------------------------------ chart segment tooltip -- */
+/* Fixed to the viewport, because the SVG scales with its viewBox and pixel
+   offsets inside it do not correspond to positions on the page. */
+.seg-tip {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;          /* never steals the hover that opened it */
+  min-width: 280px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--navy-800, #142338);
+  color: #fff;
+  box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.75);
+  font-size: 12.5px;
+  animation: tipIn 0.12s ease-out;
+}
+@keyframes tipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .seg-tip { animation: none; } }
+
+.seg { cursor: pointer; transition: opacity 0.12s; }
+.seg:hover { opacity: 0.85; }
+
+.tip-head {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 9px; margin-bottom: 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+.tip-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.tip-head b { font-size: 13.5px; text-transform: capitalize; }
+.tip-when { margin-left: auto; opacity: 0.66; font-size: 11.5px; }
+
+.tip-table { width: 100%; border-collapse: collapse; }
+.tip-table td { padding: 5px 0; vertical-align: top; }
+.tip-table tr + tr td { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+.tip-time { width: 46px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.tip-who b { display: block; font-size: 12.5px; }
+.tip-who small,
+.tip-agent small {
+  display: block; opacity: 0.6; font-size: 10.5px;
+  font-family: 'Courier New', monospace;
+}
+.tip-agent { text-align: right; white-space: nowrap; padding-left: 12px; }
+.tip-agent small { font-family: inherit; }
+
+.tip-more, .tip-none {
+  margin: 9px 0 0; padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 11.5px; opacity: 0.7;
+}
