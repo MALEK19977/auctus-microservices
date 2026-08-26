@@ -94,6 +94,7 @@ public class ChequeController {
         stats.put("daily", stats.get("series"));   // kept for existing callers
         stats.put("byAgent", agentBreakdown(cheques));
         stats.put("rejectionReasons", rejectionBreakdown(cheques));
+        stats.put("rejectionFamilies", rejectionFamilies(cheques));
         stats.put("agents", knownAgents());
 
         return ResponseEntity.ok(stats);
@@ -303,6 +304,12 @@ public class ChequeController {
             return "Reason not recorded (legacy record)";
         }
         String lower = reason.toLowerCase();
+        // Checked first: an administrator's note quotes the original verdict, so
+        // any later keyword would otherwise claim the row and hide the override.
+        if (lower.startsWith("[rejected") || lower.startsWith("[accepted")
+                || lower.contains("revu depuis")) {
+            return "Overturned by an administrator";
+        }
         if (lower.contains("signature")) return "Signature mismatch";
         if (lower.contains("plafond")) return "Ceiling altered on the cheque";
         if (lower.contains("numéro de chèque") || lower.contains("numero de cheque")) return "Cheque number altered";
@@ -313,8 +320,73 @@ public class ChequeController {
         if (lower.contains("provision") || lower.contains("solde")) return "Insufficient funds";
         if (lower.contains("compte") && lower.contains("introuvable")) return "Account not found";
         if (lower.contains("pas un chèque") || lower.contains("n'est pas un")) return "Not a cheque image";
-        if (lower.contains("revu depuis") || lower.startsWith("[rejected")) return "Overturned by an administrator";
         if (lower.contains("erreur de traitement")) return "Processing error";
         return "Unclassified rejection";
+    }
+
+    /**
+     * The stage of verification a rejection belongs to.
+     *
+     * <p>The specific cause tells an agent what happened to one cheque; the family
+     * tells an administrator which control is failing across many. Both are
+     * reported, so the chart can group without losing the detail underneath.
+     */
+    private static String family(String reason) {
+        String specific = classify(reason);
+        switch (specific) {
+            case "Not a cheque image":
+                return "Document";
+            case "Signature mismatch":
+                return "Signature";
+            case "Cheque expired":
+            case "Ceiling altered on the cheque":
+                // Both are rules the 2025 reform introduced: a published ceiling
+                // and a six-month validity carried by the QR code.
+                return "2025 cheque law";
+            case "QR code does not match the cheque":
+            case "Cheque number altered":
+            case "Account holder name altered":
+            case "Account number (RIB) altered":
+                return "QR / cheque mismatch";
+            case "Insufficient funds":
+            case "Account not found":
+                return "Account";
+            case "Overturned by an administrator":
+                return "Administrator decision";
+            default:
+                return "Processing";
+        }
+    }
+
+    /** Rejections grouped by the control that failed, largest family first. */
+    private List<Map<String, Object>> rejectionFamilies(List<Cheque> cheques) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        Map<String, Map<String, Long>> causes = new LinkedHashMap<>();
+
+        for (Cheque cheque : cheques) {
+            if (cheque.getStatus() != ChequeStatus.REJECTED) {
+                continue;
+            }
+            String fam = family(cheque.getRejectionReason());
+            counts.merge(fam, 1L, Long::sum);
+            causes.computeIfAbsent(fam, k -> new LinkedHashMap<>())
+                    .merge(classify(cheque.getRejectionReason()), 1L, Long::sum);
+        }
+
+        return counts.entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("family", e.getKey());
+                    row.put("count", e.getValue());
+                    // Carried along so a reader can see what the family is made of.
+                    row.put("causes", causes.getOrDefault(e.getKey(), Map.of())
+                            .entrySet().stream()
+                            .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                            .map(c -> Map.of("reason", c.getKey(), "count", c.getValue()))
+                            .collect(Collectors.toList()));
+                    return row;
+                })
+                .sorted((a, b) -> Long.compare((long) b.get("count"), (long) a.get("count")))
+                .collect(Collectors.toList());
     }
 }

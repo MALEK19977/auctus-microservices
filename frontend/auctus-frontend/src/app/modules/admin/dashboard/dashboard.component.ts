@@ -81,6 +81,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   agents: any[] = [];
   agentOptions: { agentId: string; name: string }[] = [];
   rejectionReasons: { reason: string; count: number }[] = [];
+  /** The same rejections grouped by which control failed. */
+  rejectionFamilies: { family: string; count: number; causes: any[] }[] = [];
 
   users: any[] = [];
   recent: any[] = [];
@@ -229,13 +231,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.series = data.series || [];
         this.agents = data.byAgent || [];
         this.rejectionReasons = data.rejectionReasons || [];
+        this.rejectionFamilies = data.rejectionFamilies || [];
         this.agentOptions = data.agents || [];
         this.buildTrend();
         this.buildAgentBars();
         this.buildReasonBars();
         this.buildKpis();
         this.buildPareto();
-        this.buildQuadrant();
+        this.buildWorkload();
         this.lastUpdated = new Date();
         this.loading = false;
       },
@@ -339,14 +342,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   readonly thresholds = [
     {
-      id: 'rejection',
-      label: 'Rejection rate',
-      limit: 20,
-      direction: 'max' as const,
-      unit: '%',
-      advice: 'One in five cheques is failing. Read the Pareto below: the top cause is usually a single fixable problem.'
-    },
-    {
       id: 'signature',
       label: 'Average signature match',
       limit: 75,
@@ -361,14 +356,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       direction: 'max' as const,
       unit: 's',
       advice: 'Validations are slow. Check that OCR, QR and signature services are all responding.'
-    },
-    {
-      id: 'agent',
-      label: 'Worst agent rejection rate',
-      limit: 35,
-      direction: 'max' as const,
-      unit: '%',
-      advice: 'One agent rejects far more than the rest. Compare them in the quadrant below before drawing a conclusion.'
     }
   ];
 
@@ -384,16 +371,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private buildKpis(): void {
-    const worst = [...(this.agents || [])]
-      .filter(a => a.total >= 5)   // a single rejection out of two proves nothing
-      .map(a => ({ name: a.agentName, rate: a.total ? (a.rejected / a.total) * 100 : 0 }))
-      .sort((a, b) => b.rate - a.rate)[0];
-
+    // Rejection rates are deliberately not monitored here. The platform decides
+    // each cheque on its own rules, so a high rate reflects the cheques that came
+    // in, not how anyone performed - alerting on it would blame the messenger.
     const readings: Record<string, { value: number; detail: string }> = {
-      rejection: {
-        value: this.stats.total ? (this.stats.rejected / this.stats.total) * 100 : 0,
-        detail: `${this.stats.rejected} of ${this.stats.total} cheques`
-      },
       signature: {
         value: (this.stats.averageSignatureScore || 0) * 100,
         detail: 'mean across cheques carrying a score'
@@ -401,10 +382,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       time: {
         value: this.stats.averageProcessingTime || 0,
         detail: 'end to end, per validation'
-      },
-      agent: {
-        value: worst ? worst.rate : 0,
-        detail: worst ? `${worst.name}` : 'no agent with enough volume yet'
       }
     };
 
@@ -431,7 +408,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   paretoTotal = 0;
 
   private buildPareto(): void {
-    const rows = [...(this.rejectionReasons || [])].sort((a, b) => b.count - a.count);
+    // Families, not individual messages: an administrator needs to know which
+    // control is failing - the document check, the QR cross-check, the signature,
+    // or a 2025 cheque-law rule - before the exact wording matters.
+    const source = (this.rejectionFamilies && this.rejectionFamilies.length > 0)
+      ? this.rejectionFamilies.map((f: any) => ({
+          reason: f.family,
+          count: f.count,
+          causes: f.causes || []
+        }))
+      : (this.rejectionReasons || []).map((r: any) => ({ ...r, causes: [] }));
+
+    const rows = [...source].sort((a, b) => b.count - a.count);
     const total = rows.reduce((sum, r) => sum + r.count, 0);
     this.paretoTotal = total;
 
@@ -473,59 +461,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Agents plotted as volume against rejection rate, split at the medians.
-   * The quadrant an agent lands in is the recommendation: high volume with a
-   * high rejection rate is where a review actually pays off.
+   * How much work each agent got through, and how quickly.
+   *
+   * This replaced a volume-against-rejection-rate scatter. Two things were wrong
+   * with it: bubbles on a quadrant are hard to read at a glance, and the platform
+   * decides each cheque itself, so an agent's rejection rate describes the
+   * cheques handed to them rather than anything they did. Throughput and speed
+   * are theirs, so those are what is shown.
    */
-  quadrant: {
-    name: string; total: number; rate: number;
-    cx: number; cy: number; r: number; risky: boolean;
+  workload: {
+    name: string; total: number; accepted: number; rejected: number;
+    seconds: number; barW: number; acceptedW: number; slow: boolean;
   }[] = [];
-  qMedianX = 0;
-  qMedianY = 0;
-  qMaxTotal = 0;
-  qMaxRate = 0;
+  workloadAvgTime = 0;
 
-  private buildQuadrant(): void {
-    const rows = (this.agents || []).filter(a => a.total > 0);
+  private buildWorkload(): void {
+    const rows = (this.agents || []).filter(a => a.total > 0)
+      .sort((a, b) => b.total - a.total);
+
     if (rows.length === 0) {
-      this.quadrant = [];
+      this.workload = [];
       return;
     }
 
-    const points = rows.map(a => ({
-      name: a.agentName,
-      total: a.total,
-      rate: a.total ? (a.rejected / a.total) * 100 : 0
-    }));
+    const max = Math.max(...rows.map(a => a.total)) || 1;
+    const times = rows.map(a => a.averageProcessingTime || 0).filter(t => t > 0);
+    this.workloadAvgTime = times.length
+      ? times.reduce((s, t) => s + t, 0) / times.length
+      : 0;
 
-    const median = (values: number[]) => {
-      const s = [...values].sort((x, y) => x - y);
-      const mid = Math.floor(s.length / 2);
-      return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-    };
-
-    const medTotal = median(points.map(p => p.total));
-    const medRate = median(points.map(p => p.rate));
-    // Padded so the busiest agent is not drawn on the frame itself.
-    this.qMaxTotal = Math.max(...points.map(p => p.total)) * 1.15 || 1;
-    this.qMaxRate = Math.max(20, Math.max(...points.map(p => p.rate)) * 1.15);
-
-    const plotH = this.chartH - this.padT - this.padB;
-    const plotW = this.chartW - this.padL - 20;
-    const toX = (v: number) => this.padL + (v / this.qMaxTotal) * plotW;
-    const toY = (v: number) => this.padT + plotH - (v / this.qMaxRate) * plotH;
-
-    this.qMedianX = toX(medTotal);
-    this.qMedianY = toY(medRate);
-
-    this.quadrant = points.map(p => ({
-      ...p,
-      cx: toX(p.total),
-      cy: toY(p.rate),
-      r: 6 + Math.min(10, p.total / 4),
-      risky: p.total >= medTotal && p.rate >= medRate && p.rate > 0
-    }));
+    this.workload = rows.map(a => {
+      const seconds = a.averageProcessingTime || 0;
+      return {
+        name: a.agentName,
+        total: a.total,
+        accepted: a.accepted,
+        rejected: a.rejected,
+        seconds,
+        barW: (a.total / max) * 100,
+        // Share of the bar that was accepted, so the split is visible inside it.
+        acceptedW: a.total ? (a.accepted / a.total) * 100 : 0,
+        // Noticeably slower than the branch: worth asking why, unlike a rejection.
+        slow: this.workloadAvgTime > 0 && seconds > this.workloadAvgTime * 1.5
+      };
+    });
   }
 
   private buildAgentBars(): void {
