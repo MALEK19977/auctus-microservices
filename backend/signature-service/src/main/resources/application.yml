@@ -26,7 +26,15 @@ python:
 signature:
   # Relative to the repository by default; override AUCTUS_DATA_DIR to use a
   # dataset kept outside it.
-  reference-folder: ${AUCTUS_DATA_DIR:../../cheque_generator}/signatures/extract
+  # Same store the client register serves specimens from. Resolved from this
+  # service working directory (backend/signature-service).
+  reference-folder: ${AUCTUS_SIGNATURES_DIR:../signatures/extract}
   csv:
     # Master client file: maps a client (by RIB or name) to their enrolled signature.
     path: ${AUCTUS_DATA_DIR:../../cheque_generator}/output/clients_master.csv
+
+services:
+  # The client register knows which specimen belongs to which account. Asking it
+  # keeps one source of truth instead of a second CSV that drifts out of date.
+  client:
+    url: ${CLIENT_SERVICE_URL:http://localhost:8086}

@@ -26,6 +26,12 @@ public class PythonExecutorService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private final ReferenceResolver referenceResolver;
+
+    public PythonExecutorService(ReferenceResolver referenceResolver) {
+        this.referenceResolver = referenceResolver;
+    }
+
     @Value("${signature.reference-folder}")
     private String signaturesFolder;
 
@@ -90,13 +96,21 @@ public class PythonExecutorService {
                 return failure("Signatures folder not found: " + signaturesFolder);
             }
 
+            // Ask the client register which specimen belongs to this account. When
+            // it answers, the matcher is handed the file directly and does no
+            // lookup of its own; otherwise it falls back to its CSV.
+            String referencePath = referenceResolver.resolve(titulaire)
+                    .map(Path::toString)
+                    .orElse("");
+
             ProcessBuilder builder = new ProcessBuilder(
                     pythonCommand(),
                     scriptPath.toString(),
                     tempFile.toString(),
                     signaturesFolder,
                     titulaire,
-                    chequesCsvPath
+                    chequesCsvPath,
+                    referencePath
             );
             log.info("Running: {}", String.join(" ", builder.command()));
 

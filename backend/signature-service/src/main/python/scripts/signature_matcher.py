@@ -282,8 +282,14 @@ def find_reference_signature(identifier, signatures_folder, register_path):
 
 # ---------------------------------------------------------------------------
 
-def verify(image_path, signatures_folder, titulaire, csv_path):
-    reference_path = find_reference_signature(titulaire, signatures_folder, csv_path)
+def verify(image_path, signatures_folder, titulaire, csv_path, reference_path=None):
+    # The caller may already know which specimen belongs to this account - the
+    # client register holds that mapping. Only fall back to searching the CSV
+    # when it does not, which is how this used to work for every cheque.
+    if reference_path and os.path.isfile(reference_path):
+        log("Reference supplied by the client register: %s" % reference_path)
+    else:
+        reference_path = find_reference_signature(titulaire, signatures_folder, csv_path)
     if reference_path is None:
         return {"success": False, "error": "No reference signature registered for: %s" % titulaire}
 
@@ -322,6 +328,8 @@ def main():
     signatures_folder = sys.argv[2]
     titulaire = sys.argv[3]
     csv_path = sys.argv[4] if len(sys.argv) > 4 else DEFAULT_CSV
+    # Optional: a specimen path the caller resolved already. Empty means "look it up".
+    reference_path = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5].strip() else None
 
     if not os.path.exists(image_path):
         print(json.dumps({"success": False, "error": "File not found: %s" % image_path}))
@@ -332,7 +340,7 @@ def main():
         sys.exit(1)
 
     try:
-        result = verify(image_path, signatures_folder, titulaire, csv_path)
+        result = verify(image_path, signatures_folder, titulaire, csv_path, reference_path)
     except Exception as exc:  # noqa: BLE001 - the service needs a JSON answer either way
         log("Unexpected failure: %r" % exc)
         result = {"success": False, "error": str(exc)}
