@@ -326,14 +326,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
   /** What still stops the group being created, in plain words. Empty when ready. */
   get groupBlocker(): string {
     if (!this.userId) { return 'You are not signed in.'; }
-    if (this.contacts.length < 2) {
-      return 'A group needs two other active accounts; only ' +
-        this.contacts.length + ' is available.';
+    if (this.contacts.length === 0) {
+      return 'There is no other active account to add.';
     }
     if (!this.groupName.trim()) { return 'Give the group a name.'; }
-    if (this.pickedCount < 2) {
-      return `Pick ${2 - this.pickedCount} more colleague(s) — a group is three people including you.`;
-    }
+    // Two people is a group: it is named, and anyone can be added later.
+    if (this.pickedCount < 1) { return 'Pick at least one colleague.'; }
     return '';
   }
 
@@ -343,7 +341,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
       .map(c => ({ userId: c.id, userName: `${c.firstName} ${c.lastName}`, userRole: c.role }));
 
     if (!this.groupName.trim()) { this.error = 'Give the group a name.'; return; }
-    if (members.length < 2) { this.error = 'Pick at least two people — a group needs three with you.'; return; }
+    if (members.length < 1) { this.error = 'Pick at least one colleague.'; return; }
 
     this.creating = true;
     this.error = '';

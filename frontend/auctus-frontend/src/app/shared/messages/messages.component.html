@@ -48,7 +48,10 @@
 
     <!-- new group -->
     <div class="panel-box" *ngIf="panel === 'group'">
-      <p class="panel-hint">Name the group and pick at least two colleagues.</p>
+      <p class="panel-hint">
+        Name the group and pick who is in it. Two people is enough — you can add
+        more at any time from inside the conversation.
+      </p>
 
       <input class="group-input" type="text" [(ngModel)]="groupName"
              name="groupName" placeholder="Group name — e.g. Cheque escalations">

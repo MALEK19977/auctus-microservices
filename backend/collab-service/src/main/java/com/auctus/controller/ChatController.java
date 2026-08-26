@@ -126,9 +126,12 @@ public class ChatController {
             if (existing != null) {
                 return ResponseEntity.ok(Map.of("id", existing.getId(), "reused", true));
             }
-        } else if (participants.size() < 3) {
+        } else if (participants.size() < 2) {
+            // Two is a group when it is named and can grow. Requiring three meant a
+            // pair could only ever talk in an unnamed direct thread that nobody
+            // else could be added to.
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "A group needs at least three people, including you"));
+                    .body(Map.of("error", "Pick at least one colleague to start a group"));
         }
 
         Conversation conversation = new Conversation();
