@@ -51,6 +51,49 @@
   <div *ngIf="loadError" class="alert alert-error">{{ loadError }}</div>
   <div *ngIf="loading" class="alert alert-info">Loading indicators…</div>
 
+  <!-- Threshold breaches. Shown only when something is actually out of bounds,
+       so its presence is itself the signal. -->
+  <section class="breach-banner" *ngIf="breaches.length > 0">
+    <div class="breach-head">
+      <span class="breach-icon">!</span>
+      <b>{{ breaches.length }} indicator{{ breaches.length > 1 ? 's are' : ' is' }} outside its limit</b>
+    </div>
+    <ul>
+      <li *ngFor="let k of breaches">
+        <b>{{ k.label }}</b>
+        <span class="breach-num">
+          {{ k.value | number:'1.0-1' }}{{ k.unit }}
+          <i>({{ k.direction === 'max' ? 'limit' : 'floor' }} {{ k.limit }}{{ k.unit }})</i>
+        </span>
+        <span class="breach-advice">{{ k.advice }}</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- All thresholds, breached or not, so the healthy ones are visible too. -->
+  <section class="kpi-strip">
+    <article class="kpi-gauge" *ngFor="let k of kpis" [class.over]="k.breached">
+      <div class="gauge-top">
+        <span class="gauge-label">{{ k.label }}</span>
+        <span class="gauge-state">{{ k.breached ? 'OVER' : 'OK' }}</span>
+      </div>
+      <div class="gauge-value">{{ k.value | number:'1.0-1' }}<small>{{ k.unit }}</small></div>
+      <div class="gauge-track">
+        <!-- Bar is read against the limit marker, not against 100. -->
+        <div class="gauge-fill"
+             [style.width.%]="k.direction === 'max'
+                ? (k.value / (k.limit * 2)) * 100
+                : (k.value / 100) * 100"></div>
+        <div class="gauge-limit"
+             [style.left.%]="k.direction === 'max' ? 50 : k.limit"></div>
+      </div>
+      <div class="gauge-foot">
+        <span>{{ k.direction === 'max' ? 'max' : 'min' }} {{ k.limit }}{{ k.unit }}</span>
+        <span class="gauge-detail">{{ k.detail }}</span>
+      </div>
+    </article>
+  </section>
+
   <!-- KPI tiles -->
   <section class="kpi-row">
     <article class="kpi-card kpi-primary">
@@ -247,6 +290,100 @@
       <p class="empty-line" *ngIf="reasonBars.length === 0">No rejections in this range.</p>
     </section>
   </div>
+
+  <!-- Which cause to fix first -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>What is driving rejections</h2>
+        <p>
+          Causes ordered by size, with the running share across them. The
+          highlighted bars are the few that account for most of the problem.
+        </p>
+      </div>
+      <span class="pareto-total" *ngIf="paretoTotal > 0">{{ paretoTotal }} rejections</span>
+    </div>
+
+    <div class="chart-wrap" *ngIf="pareto.length > 0">
+      <svg [attr.viewBox]="'0 0 ' + chartW + ' ' + chartH" class="chart" preserveAspectRatio="xMidYMid meet">
+        <text [attr.x]="-(chartH/2)" [attr.y]="14" transform="rotate(-90)"
+              text-anchor="middle" class="axis-title">Rejections</text>
+
+        <!-- The 80% line: everything left of where the curve crosses it is what to fix -->
+        <line [attr.x1]="padL" [attr.x2]="chartW - 20"
+              [attr.y1]="padT + (chartH - padT - padB) * 0.2"
+              [attr.y2]="padT + (chartH - padT - padB) * 0.2"
+              class="pareto-80"></line>
+        <text [attr.x]="chartW - 24" [attr.y]="padT + (chartH - padT - padB) * 0.2 - 5"
+              text-anchor="end" class="axis-text">80% of rejections</text>
+
+        <g *ngFor="let p of pareto">
+          <rect [attr.x]="p.x" [attr.y]="p.y" [attr.width]="p.w" [attr.height]="p.h"
+                [attr.fill]="p.vital ? COLOR.rejected : '#F3B9B9'" rx="3"></rect>
+          <text [attr.x]="p.x + p.w / 2" [attr.y]="p.y - 6"
+                text-anchor="middle" class="value-label">{{ p.count }}</text>
+          <text [attr.x]="p.x + p.w / 2" [attr.y]="chartH - padB + 16"
+                text-anchor="middle" class="axis-text pareto-cat">
+            {{ p.label.length > 22 ? (p.label | slice:0:20) + '…' : p.label }}
+          </text>
+          <text [attr.x]="p.x + p.w / 2" [attr.y]="chartH - padB + 30"
+                text-anchor="middle" class="axis-text pareto-share">{{ p.share | number:'1.0-0' }}%</text>
+        </g>
+
+        <path [attr.d]="paretoPath" class="pareto-line"></path>
+        <circle *ngFor="let p of pareto" [attr.cx]="p.px" [attr.cy]="p.py" r="3.5" class="pareto-dot"></circle>
+      </svg>
+    </div>
+    <p class="empty-line" *ngIf="pareto.length === 0">No rejections in this range.</p>
+  </section>
+
+  <!-- Who needs a look -->
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Where a review would pay off</h2>
+        <p>
+          Each agent by how much they handle and how often they reject. Lines are
+          the branch medians; bubble size is volume. Top-right handles a lot and
+          rejects a lot — that is where to look first.
+        </p>
+      </div>
+    </div>
+
+    <div class="chart-wrap" *ngIf="quadrant.length > 0">
+      <svg [attr.viewBox]="'0 0 ' + chartW + ' ' + chartH" class="chart" preserveAspectRatio="xMidYMid meet">
+        <text [attr.x]="-(chartH/2)" [attr.y]="14" transform="rotate(-90)"
+              text-anchor="middle" class="axis-title">Rejection rate (%)</text>
+
+        <rect [attr.x]="qMedianX" [attr.y]="padT"
+              [attr.width]="chartW - 20 - qMedianX" [attr.height]="qMedianY - padT"
+              class="q-hot"></rect>
+
+        <line [attr.x1]="qMedianX" [attr.x2]="qMedianX" [attr.y1]="padT"
+              [attr.y2]="chartH - padB" class="q-median"></line>
+        <line [attr.x1]="padL" [attr.x2]="chartW - 20" [attr.y1]="qMedianY"
+              [attr.y2]="qMedianY" class="q-median"></line>
+
+        <text [attr.x]="chartW - 26" [attr.y]="padT + 14" text-anchor="end" class="q-tag">
+          high volume · high rejection
+        </text>
+
+        <g *ngFor="let a of quadrant">
+          <circle [attr.cx]="a.cx" [attr.cy]="a.cy" [attr.r]="a.r"
+                  [attr.fill]="a.risky ? COLOR.rejected : COLOR.accepted"
+                  fill-opacity="0.75" [attr.stroke]="a.risky ? COLOR.rejected : COLOR.accepted"></circle>
+          <text [attr.x]="a.cx" [attr.y]="a.cy - a.r - 5" text-anchor="middle" class="q-name">
+            {{ a.name }}
+          </text>
+          <title>{{ a.name }} — {{ a.total }} cheques, {{ a.rate | number:'1.0-0' }}% rejected</title>
+        </g>
+
+        <text [attr.x]="padL + (chartW - padL) / 2" [attr.y]="chartH - 6"
+              text-anchor="middle" class="axis-title">Cheques handled</text>
+      </svg>
+    </div>
+    <p class="empty-line" *ngIf="quadrant.length === 0">No agent activity in this range.</p>
+  </section>
 
   <!-- Validation oversight -->
   <section class="panel">

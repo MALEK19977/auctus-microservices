@@ -233,6 +233,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.buildTrend();
         this.buildAgentBars();
         this.buildReasonBars();
+        this.buildKpis();
+        this.buildPareto();
+        this.buildQuadrant();
         this.lastUpdated = new Date();
         this.loading = false;
       },
@@ -325,6 +328,204 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showLabel(index: number): boolean {
     const every = this.series.length > 20 ? 5 : this.series.length > 12 ? 2 : 1;
     return index % every === 0 || index === this.series.length - 1;
+  }
+
+  /**
+   * Thresholds the branch is run against.
+   *
+   * A number on its own does not tell an administrator whether to act. Each of
+   * these carries the limit it must stay within and what to do when it does not,
+   * so a breach is a decision rather than an observation.
+   */
+  readonly thresholds = [
+    {
+      id: 'rejection',
+      label: 'Rejection rate',
+      limit: 20,
+      direction: 'max' as const,
+      unit: '%',
+      advice: 'One in five cheques is failing. Read the Pareto below: the top cause is usually a single fixable problem.'
+    },
+    {
+      id: 'signature',
+      label: 'Average signature match',
+      limit: 75,
+      direction: 'min' as const,
+      unit: '%',
+      advice: 'Matches are drifting low. Either specimens are out of date or cheques are being photographed poorly.'
+    },
+    {
+      id: 'time',
+      label: 'Average processing time',
+      limit: 60,
+      direction: 'max' as const,
+      unit: 's',
+      advice: 'Validations are slow. Check that OCR, QR and signature services are all responding.'
+    },
+    {
+      id: 'agent',
+      label: 'Worst agent rejection rate',
+      limit: 35,
+      direction: 'max' as const,
+      unit: '%',
+      advice: 'One agent rejects far more than the rest. Compare them in the quadrant below before drawing a conclusion.'
+    }
+  ];
+
+  /** Current reading of each threshold, with whether it is breached. */
+  kpis: {
+    id: string; label: string; value: number; limit: number;
+    direction: 'min' | 'max'; unit: string; breached: boolean;
+    advice: string; detail: string;
+  }[] = [];
+
+  get breaches(): typeof this.kpis {
+    return this.kpis.filter(k => k.breached);
+  }
+
+  private buildKpis(): void {
+    const worst = [...(this.agents || [])]
+      .filter(a => a.total >= 5)   // a single rejection out of two proves nothing
+      .map(a => ({ name: a.agentName, rate: a.total ? (a.rejected / a.total) * 100 : 0 }))
+      .sort((a, b) => b.rate - a.rate)[0];
+
+    const readings: Record<string, { value: number; detail: string }> = {
+      rejection: {
+        value: this.stats.total ? (this.stats.rejected / this.stats.total) * 100 : 0,
+        detail: `${this.stats.rejected} of ${this.stats.total} cheques`
+      },
+      signature: {
+        value: (this.stats.averageSignatureScore || 0) * 100,
+        detail: 'mean across cheques carrying a score'
+      },
+      time: {
+        value: this.stats.averageProcessingTime || 0,
+        detail: 'end to end, per validation'
+      },
+      agent: {
+        value: worst ? worst.rate : 0,
+        detail: worst ? `${worst.name}` : 'no agent with enough volume yet'
+      }
+    };
+
+    this.kpis = this.thresholds.map(t => {
+      const reading = readings[t.id];
+      const breached = t.direction === 'max'
+        ? reading.value > t.limit
+        : reading.value < t.limit;
+      return { ...t, value: reading.value, detail: reading.detail, breached };
+    });
+  }
+
+  /**
+   * Rejection causes as a Pareto: bars sorted by size with the running share
+   * drawn over them. It answers "which cause do I fix first, and how much of the
+   * problem does that remove" - the plain bar list could not.
+   */
+  pareto: {
+    label: string; count: number; share: number; cumulative: number;
+    x: number; y: number; w: number; h: number; px: number; py: number;
+    vital: boolean;
+  }[] = [];
+  paretoPath = '';
+  paretoTotal = 0;
+
+  private buildPareto(): void {
+    const rows = [...(this.rejectionReasons || [])].sort((a, b) => b.count - a.count);
+    const total = rows.reduce((sum, r) => sum + r.count, 0);
+    this.paretoTotal = total;
+
+    if (total === 0) {
+      this.pareto = [];
+      this.paretoPath = '';
+      return;
+    }
+
+    const plotH = this.chartH - this.padT - this.padB;
+    const step = (this.chartW - this.padL - 20) / rows.length;
+    const barW = Math.min(56, step * 0.62);
+    const max = rows[0].count;
+
+    let running = 0;
+    this.pareto = rows.map((row, i) => {
+      running += row.count;
+      const cumulative = (running / total) * 100;
+      const h = (row.count / max) * plotH;
+      const x = this.padL + i * step + (step - barW) / 2;
+      return {
+        label: row.reason,
+        count: row.count,
+        share: (row.count / total) * 100,
+        cumulative,
+        x, w: barW,
+        y: this.padT + plotH - h,
+        h: Math.max(2, h),
+        px: x + barW / 2,
+        py: this.padT + plotH - (cumulative / 100) * plotH,
+        // The causes that together make up the first 80% - the ones worth fixing.
+        vital: cumulative - (row.count / total) * 100 < 80
+      };
+    });
+
+    this.paretoPath = this.pareto
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.px} ${p.py}`)
+      .join(' ');
+  }
+
+  /**
+   * Agents plotted as volume against rejection rate, split at the medians.
+   * The quadrant an agent lands in is the recommendation: high volume with a
+   * high rejection rate is where a review actually pays off.
+   */
+  quadrant: {
+    name: string; total: number; rate: number;
+    cx: number; cy: number; r: number; risky: boolean;
+  }[] = [];
+  qMedianX = 0;
+  qMedianY = 0;
+  qMaxTotal = 0;
+  qMaxRate = 0;
+
+  private buildQuadrant(): void {
+    const rows = (this.agents || []).filter(a => a.total > 0);
+    if (rows.length === 0) {
+      this.quadrant = [];
+      return;
+    }
+
+    const points = rows.map(a => ({
+      name: a.agentName,
+      total: a.total,
+      rate: a.total ? (a.rejected / a.total) * 100 : 0
+    }));
+
+    const median = (values: number[]) => {
+      const s = [...values].sort((x, y) => x - y);
+      const mid = Math.floor(s.length / 2);
+      return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+    };
+
+    const medTotal = median(points.map(p => p.total));
+    const medRate = median(points.map(p => p.rate));
+    // Padded so the busiest agent is not drawn on the frame itself.
+    this.qMaxTotal = Math.max(...points.map(p => p.total)) * 1.15 || 1;
+    this.qMaxRate = Math.max(20, Math.max(...points.map(p => p.rate)) * 1.15);
+
+    const plotH = this.chartH - this.padT - this.padB;
+    const plotW = this.chartW - this.padL - 20;
+    const toX = (v: number) => this.padL + (v / this.qMaxTotal) * plotW;
+    const toY = (v: number) => this.padT + plotH - (v / this.qMaxRate) * plotH;
+
+    this.qMedianX = toX(medTotal);
+    this.qMedianY = toY(medRate);
+
+    this.quadrant = points.map(p => ({
+      ...p,
+      cx: toX(p.total),
+      cy: toY(p.rate),
+      r: 6 + Math.min(10, p.total / 4),
+      risky: p.total >= medTotal && p.rate >= medRate && p.rate > 0
+    }));
   }
 
   private buildAgentBars(): void {
