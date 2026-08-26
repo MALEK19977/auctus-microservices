@@ -34,7 +34,13 @@ public class LiveHub {
         byUser.computeIfAbsent(userId, key -> new CopyOnWriteArraySet<>()).add(emitter);
 
         emitter.onCompletion(() -> remove(userId, emitter));
-        emitter.onTimeout(() -> remove(userId, emitter));
+        emitter.onTimeout(() -> {
+            remove(userId, emitter);
+            // Completing it tells Spring the async request ended on purpose. Without
+            // this the container raises AsyncRequestTimeoutException and logs a WARN
+            // every time a browser sits idle past the timeout, which is routine.
+            emitter.complete();
+        });
         emitter.onError(error -> remove(userId, emitter));
 
         try {
