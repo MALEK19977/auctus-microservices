@@ -109,9 +109,11 @@
 /* ---------- KPI tiles ---------- */
 
 .kpi-row {
+  /* One line: five equal tiles. The headline tile is given more room because it
+     carries the sparkline as well as the figure. */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1.35fr repeat(4, 1fr);
+  gap: 14px;
   margin-bottom: 22px;
 }
 
@@ -360,55 +362,9 @@
 .breach-num i { font-style: normal; opacity: 0.65; margin-left: 4px; }
 .breach-advice { opacity: 0.85; }
 
-/* Every threshold, healthy ones included. */
-.kpi-strip {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 13px; margin-bottom: 18px;
-}
-.kpi-gauge {
-  padding: 14px 16px; border-radius: 13px; background: #fff;
-  border: 1px solid var(--line, #EDEEF1);
-  box-shadow: 0 10px 22px -18px rgba(10, 17, 40, 0.5);
-}
-.kpi-gauge.over { border-color: var(--bad, #EF4444); background: #FFF7F7; }
-
-.gauge-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.gauge-label { font-size: 11.5px; color: var(--ink-muted, #6B7280); }
-.gauge-state {
-  font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em;
-  padding: 2px 7px; border-radius: 999px;
-  background: var(--ok-bg, #D1FAE5); color: var(--ok-ink, #065F46);
-}
-.kpi-gauge.over .gauge-state { background: var(--bad, #EF4444); color: #fff; }
-
-.gauge-value { font-size: 25px; font-weight: 700; color: var(--ink-strong, #1A1A2E); }
-.gauge-value small { font-size: 13px; font-weight: 500; opacity: 0.6; margin-left: 2px; }
-
-.gauge-track {
-  position: relative; height: 6px; border-radius: 999px;
-  background: var(--surface-3, #F1F2F5); margin: 9px 0 7px; overflow: hidden;
-}
-.gauge-fill { height: 100%; background: var(--ok, #10B981); border-radius: 999px; max-width: 100%; }
-.kpi-gauge.over .gauge-fill { background: var(--bad, #EF4444); }
-/* The limit marker is what the bar is read against. */
-.gauge-limit {
-  position: absolute; top: -2px; width: 2px; height: 10px;
-  background: var(--ink-strong, #1A1A2E); opacity: 0.55;
-}
-
-.gauge-foot {
-  display: flex; justify-content: space-between; gap: 8px;
-  font-size: 10.5px; color: var(--ink-faint, #9CA3AF);
-}
-.gauge-detail { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Pareto */
-.pareto-total { font-size: 12px; color: var(--ink-muted, #6B7280); }
-.pareto-line { fill: none; stroke: var(--navy-700, #0F1A3A); stroke-width: 2; }
-.pareto-dot { fill: var(--navy-700, #0F1A3A); }
-.pareto-80 { stroke: var(--warn, #F59E0B); stroke-width: 1.5; stroke-dasharray: 5 4; }
-.pareto-cat { font-size: 10px; }
-.pareto-share { font-size: 9.5px; opacity: 0.6; }
+.panel-note { font-size: 12px; color: var(--ink-muted, #6B7280); }
 
 /* Quadrant */
 .q-median { stroke: var(--line-strong, #E5E7EB); stroke-width: 1.5; stroke-dasharray: 4 4; }
@@ -421,22 +377,6 @@
   .kpi-strip { grid-template-columns: 1fr; }
 }
 
-/* Context tiles: volume and money. Deliberately quieter than the indicators
-   that carry a limit, so the eye lands on what needs a decision first. */
-.kpi-card.kpi-context {
-  background: var(--surface-3, #F1F2F5);
-  border-color: transparent;
-  box-shadow: none;
-  padding: 10px 12px;
-}
-.kpi-card.kpi-context .kpi-value {
-  font-size: 17px;
-  color: var(--ink-muted, #6B7280);
-  font-weight: 600;
-}
-.kpi-card.kpi-context .kpi-value small { font-size: 10px; }
-.kpi-card.kpi-context .kpi-label,
-.kpi-card.kpi-context .kpi-foot { font-size: 10px; color: var(--ink-faint, #9CA3AF); }
 
 /* Agent workload: a bar per agent, read left to right. Replaced a scatter that
    needed explaining before it could be used. */
@@ -492,4 +432,67 @@
   padding: 4px 11px; border-radius: 999px;
   background: var(--bad, #EF4444); color: #fff;
   font-size: 11px; font-weight: 700;
+}
+
+
+/* ---------------------------------------------------- headline tile ----- */
+/* Volume leads the row. Dark, so the eye lands here first, and it carries the
+   shape of the period underneath the figure - a total says how many, the line
+   says whether that is a normal week. */
+.kpi-card.kpi-hero {
+  background: var(--grad-navy, linear-gradient(135deg, #0A1128, #0F1A3A 50%, #1A2A4A));
+  border-color: transparent;
+  overflow: hidden;
+  padding-bottom: 34px;
+}
+.kpi-hero::before { background: var(--grad-gold, linear-gradient(135deg, #C6A43F, #E8C97A)); opacity: 1; }
+.kpi-hero .kpi-label { color: rgba(255, 255, 255, 0.66); }
+.kpi-hero .kpi-value { color: #fff; font-size: 34px; }
+.kpi-hero .kpi-foot { color: rgba(255, 255, 255, 0.6); }
+
+.spark {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  width: 100%; height: 38px; display: block;
+}
+.spark-line {
+  fill: none; stroke: var(--sky-300, #E8C97A);
+  stroke-width: 1.6; vector-effect: non-scaling-stroke;
+  stroke-linejoin: round; stroke-linecap: round;
+}
+.spark-fill { fill: rgba(232, 201, 122, 0.16); stroke: none; }
+
+/* ------------------------------------------------- inline limit state --- */
+/* The two indicators that carry a limit show it on the tile itself, rather than
+   in a second strip repeating the same numbers. */
+.kpi-label { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.pill {
+  font-style: normal; flex: none;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em;
+  background: var(--ok-bg, #D1FAE5); color: var(--ok-ink, #065F46);
+}
+.pill.bad { background: var(--bad, #EF4444); color: #fff; }
+
+.kpi-bar {
+  position: relative; display: block;
+  height: 5px; border-radius: 999px;
+  background: var(--surface-3, #F1F2F5);
+  overflow: visible;
+}
+.kpi-bar i {
+  display: block; height: 100%; max-width: 100%;
+  border-radius: 999px; background: var(--ok, #10B981);
+  transition: width 0.3s var(--ease, ease);
+}
+.kpi-bar i.bad { background: var(--bad, #EF4444); }
+/* The limit marker: the fill is read against this, not against the full track. */
+.kpi-bar b {
+  position: absolute; top: -3px; width: 2px; height: 11px;
+  background: var(--ink-strong, #1A1A2E); opacity: 0.5; border-radius: 1px;
+}
+
+.kpi-card.over { border-color: var(--bad, #EF4444); background: #FFF8F8; }
+
+@media (max-width: 1250px) {
+  .kpi-row { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 }

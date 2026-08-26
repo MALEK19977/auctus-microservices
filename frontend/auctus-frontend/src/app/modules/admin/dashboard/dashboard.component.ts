@@ -27,6 +27,19 @@ interface Column {
   segments: { y: number; height: number; fill: string; status: string; count: number }[];
 }
 
+/** An indicator with a limit, and whether it is currently outside it. */
+interface Kpi {
+  id: string;
+  label: string;
+  value: number;
+  limit: number;
+  direction: 'min' | 'max';
+  unit: string;
+  breached: boolean;
+  advice: string;
+  detail: string;
+}
+
 interface RangeOption {
   id: string;
   label: string;
@@ -237,10 +250,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.rejectionFamilies = data.rejectionFamilies || [];
         this.agentOptions = data.agents || [];
         this.buildTrend();
+        this.buildSpark();
         this.buildAgentBars();
         this.buildReasonBars();
         this.buildKpis();
-        this.buildPareto();
         this.buildWorkload();
         this.lastUpdated = new Date();
         this.loading = false;
@@ -259,6 +272,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: data => {
         this.detailRows = data.content || [];
         this.recent = this.detailRows.slice(0, 12);
+        // These rows arrive on their own request, so the distribution is rebuilt
+        // here too - otherwise the first paint charts an empty list.
       },
       error: () => { this.detailRows = []; this.recent = []; }
     });
@@ -368,14 +383,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ];
 
   /** Current reading of each threshold, with whether it is breached. */
-  kpis: {
-    id: string; label: string; value: number; limit: number;
-    direction: 'min' | 'max'; unit: string; breached: boolean;
-    advice: string; detail: string;
-  }[] = [];
+  kpis: Kpi[] = [];
 
-  get breaches(): typeof this.kpis {
+  get breaches(): Kpi[] {
     return this.kpis.filter(k => k.breached);
+  }
+
+  /** One indicator by id, so a tile can show its own limit state inline. */
+  kpi(id: string): Kpi | null {
+    return this.kpis.find(k => k.id === id) || null;
+  }
+
+  /**
+   * Volume over the period as a sparkline inside the headline tile.
+   * A total says how many; the shape says whether that is a normal week.
+   */
+  spark = '';
+  sparkArea = '';
+
+  private buildSpark(): void {
+    const values = this.series.map(b => b.total);
+    if (values.length < 2) {
+      this.spark = '';
+      this.sparkArea = '';
+      return;
+    }
+
+    const max = Math.max(...values, 1);
+    const stepX = 120 / (values.length - 1);
+    const points = values.map((v, i) => {
+      const x = i * stepX;
+      // 3px of headroom so a peak is not clipped by the viewBox edge.
+      const y = 31 - (v / max) * 28;
+      return `${x.toFixed(1)} ${y.toFixed(1)}`;
+    });
+
+    this.spark = 'M ' + points.join(' L ');
+    this.sparkArea = `M 0 34 L ${points.join(' L ')} L 120 34 Z`;
   }
 
   private buildKpis(): void {
@@ -400,72 +444,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         : reading.value < t.limit;
       return { ...t, value: reading.value, detail: reading.detail, breached };
     });
-  }
-
-  /**
-   * Rejection causes as a Pareto: bars sorted by size with the running share
-   * drawn over them. It answers "which cause do I fix first, and how much of the
-   * problem does that remove" - the plain bar list could not.
-   */
-  pareto: {
-    label: string; count: number; share: number; cumulative: number;
-    x: number; y: number; w: number; h: number; px: number; py: number;
-    vital: boolean;
-  }[] = [];
-  paretoPath = '';
-  paretoTotal = 0;
-
-  private buildPareto(): void {
-    // Families, not individual messages: an administrator needs to know which
-    // control is failing - the document check, the QR cross-check, the signature,
-    // or a 2025 cheque-law rule - before the exact wording matters.
-    const source = (this.rejectionFamilies && this.rejectionFamilies.length > 0)
-      ? this.rejectionFamilies.map((f: any) => ({
-          reason: f.family,
-          count: f.count,
-          causes: f.causes || []
-        }))
-      : (this.rejectionReasons || []).map((r: any) => ({ ...r, causes: [] }));
-
-    const rows = [...source].sort((a, b) => b.count - a.count);
-    const total = rows.reduce((sum, r) => sum + r.count, 0);
-    this.paretoTotal = total;
-
-    if (total === 0) {
-      this.pareto = [];
-      this.paretoPath = '';
-      return;
-    }
-
-    const plotH = this.chartH - this.padT - this.padB;
-    const step = (this.chartW - this.padL - 20) / rows.length;
-    const barW = Math.min(56, step * 0.62);
-    const max = rows[0].count;
-
-    let running = 0;
-    this.pareto = rows.map((row, i) => {
-      running += row.count;
-      const cumulative = (running / total) * 100;
-      const h = (row.count / max) * plotH;
-      const x = this.padL + i * step + (step - barW) / 2;
-      return {
-        label: row.reason,
-        count: row.count,
-        share: (row.count / total) * 100,
-        cumulative,
-        x, w: barW,
-        y: this.padT + plotH - h,
-        h: Math.max(2, h),
-        px: x + barW / 2,
-        py: this.padT + plotH - (cumulative / 100) * plotH,
-        // The causes that together make up the first 80% - the ones worth fixing.
-        vital: cumulative - (row.count / total) * 100 < 80
-      };
-    });
-
-    this.paretoPath = this.pareto
-      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.px} ${p.py}`)
-      .join(' ');
   }
 
   /**
